@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<artifactId>RxNorm</artifactId>
+		<groupId>gov.va.oia.terminology.converters</groupId>
+		<version>1.0-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>RxNorm-econcept</artifactId>
+	<packaging>pom</packaging>
+	<name>RxNorm-econcept</name>
+	<!-- this should be set to ${sourceData.version}-loader-${project.parent.version} but that doesn't appease the maven gods that know best.... -->
+	<version>2013.05.06-loader-1.0-SNAPSHOT</version>
+
+	<properties>
+		<sourceData.version>2013.05.06</sourceData.version>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>attach-data</id>
+						<configuration>
+							<descriptors>
+								<descriptor>src/main/assembly/generated-artifact.xml</descriptor>
+							</descriptors>
+						</configuration>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<phase>package</phase>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Get RxNorm source file from archiva -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>fetch-RxNorm-econcept</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>unpack</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<artifactItem>
+									<groupId>gov.va.oia.terminology.source.RxNorm</groupId>
+									<artifactId>RxNorm-src-data</artifactId>
+									<version>${sourceData.version}</version>
+									<type>zip</type>
+								</artifactItem>
+							</artifactItems>
+							<outputDirectory>${project.build.directory}/generated-resources/src</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>RxNorm-mojo</artifactId>
+				<version>${project.parent.version}</version>
+				<executions>
+					<execution>
+						<id>buildRxNorm</id>
+						<configuration>
+							<!-- Use this to process whatever source file comes out of the zip file found in the fetch-RxNorm-econcept process -->
+							<srcDataPath>${project.build.directory}/generated-resources/src</srcDataPath>
+						</configuration>
+						<goals>
+							<goal>buildRxNorm</goal>
+						</goals>
+						<phase>generate-resources</phase>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>
