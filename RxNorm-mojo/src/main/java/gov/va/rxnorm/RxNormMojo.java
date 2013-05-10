@@ -5,26 +5,22 @@ import gov.va.oia.terminology.converters.sharedUtils.EConceptUtility;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.PropertyType;
 import gov.va.oia.terminology.converters.sharedUtils.stats.ConverterUUID;
 import gov.va.oia.terminology.converters.umlsUtils.RRFDatabaseHandle;
-import gov.va.oia.terminology.converters.umlsUtils.sql.ColumnDefinition;
-import gov.va.oia.terminology.converters.umlsUtils.sql.DataType;
+import gov.va.oia.terminology.converters.umlsUtils.UMLSFileReader;
 import gov.va.oia.terminology.converters.umlsUtils.sql.TableDefinition;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.sql.PreparedStatement;
-import java.sql.Types;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.dwfa.cement.ArchitectonicAuxiliary;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.input.SAXBuilder;
 
 /**
  * Goal to build RxNorm
@@ -39,6 +35,7 @@ public class RxNormMojo extends AbstractMojo
 	private EConceptUtility eConcepts_;
 	private ArrayList<PropertyType> propertyTypes_ = new ArrayList<PropertyType>();
 	private DataOutputStream dos_;
+	private RRFDatabaseHandle db_;
 
 	/**
 	 * Where RxNorm source files are
@@ -79,138 +76,7 @@ public class RxNormMojo extends AbstractMojo
 		{
 			outputDirectory.mkdir();
 
-			// Set up the DB for loading the temp data
-			RRFDatabaseHandle db = new RRFDatabaseHandle();
-			new File(outputDirectory, "rrfDB.h2.db").delete();
-			db.createDatabase(new File(outputDirectory, "rrfDB"));
-
-			SAXBuilder builder = new SAXBuilder();
-			Document d = builder.build(RxNormMojo.class.getResourceAsStream("/RxNormTableDefinitions.xml"));
-			Element root = d.getRootElement();
-
-			ArrayList<TableDefinition> tables = new ArrayList<>();
-
-			for (Element table : root.getChildren())
-			{
-				TableDefinition td = new TableDefinition(table.getAttributeValue("name"));
-				for (Element column : table.getChildren())
-				{
-					Integer size = null;
-					if (column.getAttributeValue("size") != null)
-					{
-						size = Integer.parseInt(column.getAttributeValue("size"));
-					}
-					Boolean allowNull = null;
-					if (column.getAttributeValue("allowNull") != null)
-					{
-						allowNull = Boolean.valueOf(column.getAttributeValue("allowNull"));
-					}
-					td.addColumn(new ColumnDefinition(column.getAttributeValue("name"), new DataType(column.getAttributeValue("type"), size, allowNull)));
-				}
-				tables.add(td);
-				db.createTable(td);
-			}
-
-			for (TableDefinition td : tables)
-			{
-				ConsoleUtil.println("Creating table " + td.getTableName());
-				StringBuilder insert = new StringBuilder();
-				insert.append("INSERT INTO ");
-				insert.append(td.getTableName());
-				insert.append("(");
-				for (ColumnDefinition cd : td.getColumns())
-				{
-					insert.append(cd.getColumnName());
-					insert.append(",");
-				}
-				insert.setLength(insert.length() - 1);
-				insert.append(") VALUES (");
-				for (ColumnDefinition cd : td.getColumns())
-				{
-					insert.append("?,");
-				}
-				insert.setLength(insert.length() - 1);
-				insert.append(")");
-
-				PreparedStatement ps = db.getConnection().prepareStatement(insert.toString());
-
-				ConsoleUtil.println("Loading table " + td.getTableName());
-				BufferedReader br = Files.newBufferedReader(new File(srcDataPath, "rrf/" + td.getTableName() + ".RRF").toPath(), Charset.forName("UTF-8"));
-				String line = null;
-				while ((line = br.readLine()) != null)
-				{
-					String[] cols = line.split("\\|", -1);
-					//-1 is because the files have a trailing seperator, with no data after it
-					if (cols.length - 1 != td.getColumns().size())
-					{
-						throw new RuntimeException("Data length mismatch!");
-					}
-					
-					ps.clearParameters();
-					int i = 1;
-					for (String s : cols)
-					{
-						if (i > td.getColumns().size() && (s == null || s.length() == 0))
-						{
-							//skip the last blank one
-							break;
-						}
-						DataType colType = td.getColumns().get(i - 1).getDataType(); 
-						if (colType.isBoolean())
-						{
-							if (s == null || s.length() == 0)
-							{
-								ps.setNull(i, Types.BOOLEAN);
-							}
-							else
-							{
-								ps.setBoolean(i, Boolean.valueOf(s));
-							}
-						}
-						else if (colType.isInteger())
-						{
-							if (s == null || s.length() == 0)
-							{
-								ps.setNull(i, Types.INTEGER);
-							}
-							else
-							{
-								ps.setInt(i, Integer.parseInt(s));
-							}
-						}
-						else if (colType.isLong())
-						{
-							if (s == null || s.length() == 0)
-							{
-								ps.setNull(i, Types.BIGINT);
-							}
-							else
-							{
-								ps.setLong(i, Long.parseLong(s));
-							}
-						}
-						else if (colType.isString())
-						{
-							if (s == null || s.length() == 0)
-							{
-								ps.setNull(i, Types.VARCHAR);
-							}
-							else
-							{
-								ps.setString(i, s);
-							}
-						}
-						else
-						{
-							throw new RuntimeException("oops");
-						}
-						i++;
-					}
-					ps.execute();
-				}
-				ps.close();
-				br.close();
-			}
+			loadDatabase();
 
 			File binaryOutputFile = new File(outputDirectory, "RxNorm.jbin");
 
@@ -227,6 +93,7 @@ public class RxNormMojo extends AbstractMojo
 			// eConcepts_.storeRefsetConcepts(refsets, dos_);
 
 			dos_.close();
+			db_.shutdown();
 
 			ConsoleUtil.println("Load Statistics");
 			for (String s : eConcepts_.getLoadStats().getSummary())
@@ -255,6 +122,44 @@ public class RxNormMojo extends AbstractMojo
 			// //noop
 			// }
 		}
+	}
+
+	private void loadDatabase() throws Exception
+	{
+		// Set up the DB for loading the temp data
+		db_ = new RRFDatabaseHandle();
+		new File(outputDirectory, "rrfDB.h2.db").delete();
+		db_.createDatabase(new File(outputDirectory, "rrfDB"));
+
+		// RxNorm doesn't give us the UMLS tables that define the table definitions, so I put them into an XML file.
+		List<TableDefinition> tables = db_.loadTableDefinitionsFromXML(RxNormMojo.class.getResourceAsStream("/RxNormTableDefinitions.xml"));
+
+		// Read the RRF file directly from the source zip file
+		ZipFile zf = null;
+		for (File f : srcDataPath.listFiles())
+		{
+			if (f.getName().toLowerCase().startsWith("rxnorm_full_") && f.getName().toLowerCase().endsWith(".zip"))
+			{
+				zf = new ZipFile(f);
+				break;
+			}
+		}
+		if (zf == null)
+		{
+			throw new MojoExecutionException("Can't find source zip file");
+		}
+
+		for (TableDefinition td : tables)
+		{
+			ZipEntry ze = zf.getEntry("rrf/" + td.getTableName() + ".RRF");
+			if (ze == null)
+			{
+				throw new MojoExecutionException("Can't find the file 'rrf/" + td.getTableName() + ".RRF' in the zip file");
+			}
+
+			db_.loadDataIntoTable(td, new UMLSFileReader(new BufferedReader(new InputStreamReader(zf.getInputStream(ze)))));
+		}
+		zf.close();
 	}
 
 	public static void main(String[] args) throws MojoExecutionException

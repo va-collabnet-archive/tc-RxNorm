@@ -72,11 +72,6 @@
 				<artifactId>umlsLoaderUtilities</artifactId>
 				<version>${umlsLoaderUtils.version}</version>
 			</dependency>
-			<dependency>
-				<groupId>org.jdom</groupId>
-				<artifactId>jdom2</artifactId>
-				<version>2.0.5</version>
-			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
