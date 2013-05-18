@@ -20,20 +20,55 @@
 	<build>
 		<plugins>
 			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-assembly-plugin</artifactId>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>truezip-maven-plugin</artifactId>
+				<version>1.1</version>
 				<executions>
 					<execution>
 						<id>attach-data</id>
 						<configuration>
-							<descriptors>
-								<descriptor>src/main/assembly/generated-artifact.xml</descriptor>
-							</descriptors>
+							<filesets>
+								<fileset>
+									<directory>${project.build.directory}</directory>
+									<includes>
+										<include>RxNorm.jbin</include>
+									</includes>
+									<outputDirectory>${project.build.directory}/${project.build.finalName}.zip</outputDirectory>
+								</fileset>
+								<fileSet>
+									<directory>${project.build.directory}</directory>
+									<includes>
+										<include>ConsoleOutput.txt</include>
+									</includes>
+									<outputDirectory>${project.build.directory}/${project.build.finalName}.zip/Stats_and_Debug/</outputDirectory>
+								</fileSet>
+							</filesets>
 						</configuration>
 						<goals>
-							<goal>single</goal>
+							<goal>copy</goal>
 						</goals>
 						<phase>package</phase>
+					</execution>
+				</executions>
+			</plugin>
+				
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-install-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>install-jbin-file</id>
+						<phase>install</phase>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<configuration>
+							<file>${project.build.directory}/${project.build.finalName}.zip</file>
+							<groupId>${project.groupId}</groupId>
+							<artifactId>${project.artifactId}</artifactId>
+							<packaging>zip</packaging>
+							<version>${project.version}</version>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
