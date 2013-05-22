@@ -2,10 +2,12 @@ package gov.va.rxnorm;
 
 import gov.va.oia.terminology.converters.sharedUtils.ConsoleUtil;
 import gov.va.oia.terminology.converters.sharedUtils.EConceptUtility;
+import gov.va.oia.terminology.converters.sharedUtils.EConceptUtility.DescriptionType;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_ContentVersion;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_ContentVersion.BaseContentVersion;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Descriptions;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Refsets;
+import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Relations;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.ConceptCreationNotificationListener;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.Property;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.PropertyType;
@@ -17,10 +19,11 @@ import gov.va.oia.terminology.converters.umlsUtils.sql.TableDefinition;
 import gov.va.rxnorm.propertyTypes.PT_Attributes;
 import gov.va.rxnorm.propertyTypes.PT_IDs;
 import gov.va.rxnorm.propertyTypes.PT_Refsets;
+import gov.va.rxnorm.propertyTypes.PT_Relationship_Metadata;
 import gov.va.rxnorm.propertyTypes.PT_SAB_Metadata;
-import gov.va.rxnorm.propertyTypes.PT_Suppress;
 import gov.va.rxnorm.rrf.RXNCONSO;
 import gov.va.rxnorm.rrf.RXNSAT;
+import gov.va.rxnorm.rrf.Relationship;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -37,6 +40,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
@@ -44,6 +48,7 @@ import java.util.zip.ZipFile;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.dwfa.cement.ArchitectonicAuxiliary;
+import org.dwfa.util.id.Type3UuidFactory;
 import org.ihtsdo.etypes.EConcept;
 import org.ihtsdo.tk.dto.concept.component.description.TkDescription;
 import org.ihtsdo.tk.dto.concept.component.refex.type_string.TkRefsetStrMember;
@@ -72,9 +77,17 @@ public class RxNormMojo extends AbstractMojo
 	private PropertyType ptSuppress_;
 	private BPT_Refsets ptRefsets_;
 	private PropertyType ptContentVersion_;
+	private PropertyType ptSourceRestrictionLevels_;
+	private PropertyType ptSTypes_;
+	private PropertyType ptRelationships_;
+	
+	private HashMap<String, UUID> semanticTypes_ = new HashMap<>();
+	HashMap<String, Relationship> nameToRel_ = new HashMap<>();
 
 	private EConcept allRefsetConcept_;
 	private EConcept cpcRefsetConcept_;
+	
+	private long attributeSkip_ = 0;
 
 	/**
 	 * Where RxNorm source files are
@@ -185,6 +198,7 @@ public class RxNormMojo extends AbstractMojo
 			ConsoleUtil.println("Dumping UUID Debug File");
 			ConverterUUID.dump(new File(outputDirectory, "RxNormUuidDebugMap.txt"));
 			ConsoleUtil.writeOutputToFile(new File(outputDirectory, "ConsoleOutput.txt").toPath());
+			ConsoleUtil.println("Skipped " + attributeSkip_ + " attributes to save memory...");
 		}
 		catch (Exception e)
 		{
@@ -258,6 +272,8 @@ public class RxNormMojo extends AbstractMojo
 			ConsoleUtil.showProgress();
 			s.execute("CREATE INDEX sty_rxcui_index ON RXNSTY (RXCUI)");
 			ConsoleUtil.showProgress();
+			s.execute("CREATE INDEX sty_tui_index ON RXNSTY (TUI)");
+			ConsoleUtil.showProgress();
 			s.execute("CREATE INDEX rel_rxcui2_index ON RXNREL (RXCUI2)");
 			ConsoleUtil.showProgress();
 			s.execute("CREATE INDEX rel_rxaui2_index ON RXNREL (RXAUI2)");
@@ -326,6 +342,9 @@ public class RxNormMojo extends AbstractMojo
 		
 		//Add attributes
 		processAttributes(concept, conceptData.get(0).rxcui);
+		
+		//add semantic types
+		processSemanticTypes(concept, conceptData.get(0).rxcui);
 
 		eConcepts_.addRefsetMember(allRefsetConcept_, concept.getPrimordialUuid(), null, true, null);
 		concept.writeExternal(dos_);
@@ -343,22 +362,36 @@ public class RxNormMojo extends AbstractMojo
 			rowData.add(new RXNSAT(rs));
 		}
 		
+		int rowCount = 0;
+		
 		for (RXNSAT row : rowData)
 		{
-			if (ptAttributes_.getProperty(row.atn) == null)
+			if (rowCount > 5)  //TODO figure out how we scale this
 			{
-				System.out.println("gak - missing " + row.atn);
-				continue;
+				attributeSkip_ += rowData.size() - rowCount;
+				break;
 			}
 			//for some reason, ATUI isn't always provided - don't know why.  fallback on randomly generated in those cases.
 			TkRefsetStrMember attribute = eConcepts_.addStringAnnotation(concept.getConceptAttributes(), 
 					(row.atui == null ? null : ConverterUUID.createNamespaceUUIDFromString("ATUI" + row.atui)), row.atv, 
 					ptAttributes_.getProperty(row.atn).getUUID(), false, null);
 			
-			eConcepts_.addStringAnnotation(attribute, row.rxaui, ptAttributes_.getProperty("RXAUI").getUUID(), false);
-			eConcepts_.addStringAnnotation(attribute, row.stype, ptAttributes_.getProperty("STYPE").getUUID(), false);
-			eConcepts_.addStringAnnotation(attribute, row.code, ptAttributes_.getProperty("CODE").getUUID(), false);  //might be duplicate, not sure?
-			eConcepts_.addStringAnnotation(attribute, row.atui, ptAttributes_.getProperty("ATUI").getUUID(), false);
+			if (row.rxaui != null)
+			{
+				eConcepts_.addStringAnnotation(attribute, row.rxaui, ptAttributes_.getProperty("RXAUI").getUUID(), false);
+			}
+			if (row.stype != null)
+			{
+				eConcepts_.addUuidAnnotation(attribute, ptSTypes_.getProperty(row.stype).getUUID(), ptAttributes_.getProperty("STYPE").getUUID());
+			}
+			if (row.code != null)
+			{
+				eConcepts_.addStringAnnotation(attribute, row.code, ptAttributes_.getProperty("CODE").getUUID(), false);
+			}
+			if (row.atui != null)
+			{
+				eConcepts_.addStringAnnotation(attribute, row.atui, ptAttributes_.getProperty("ATUI").getUUID(), false);
+			}
 			if (row.satui != null)
 			{
 				eConcepts_.addStringAnnotation(attribute, row.satui, ptAttributes_.getProperty("SATUI").getUUID(), false);
@@ -379,19 +412,35 @@ public class RxNormMojo extends AbstractMojo
 					throw new RuntimeException("Unexpected value in RXNSAT cvf column '" + row.cvf + "'");
 				}
 			}
-			
+			rowCount++;
+		}
+	}
+	
+	private void processSemanticTypes(EConcept concept, String rxcui) throws SQLException
+	{
+		PreparedStatement ps = db_.getConnection().prepareStatement("select TUI, ATUI from RXNSTY where RXCUI = ?");
+		ps.setString(1, rxcui);
+		ResultSet rs = ps.executeQuery();
+		
+		while (rs.next())
+		{
+			if (rs.getString("ATUI") != null)
+			{
+				throw new RuntimeException("Unexpected ATUI value");
+			}
+			eConcepts_.addUuidAnnotation(concept.getConceptAttributes(), semanticTypes_.get(rs.getString("TUI")), ptAttributes_.getProperty("STY").getUUID());
 		}
 	}
 
 	private void loadMetaData() throws Exception
 	{
 		ptIds_ = new PT_IDs();
-		ptSuppress_ = new PT_Suppress();
 		ptRefsets_ = new PT_Refsets(terminologyName_);
 		ptContentVersion_ = new BPT_ContentVersion();
 		final PropertyType sourceMetadata = new PT_SAB_Metadata();
+		final PropertyType relationshipMetadata = new PT_Relationship_Metadata();
 
-		eConcepts_.loadMetaDataItems(Arrays.asList(ptIds_, ptSuppress_, ptRefsets_, ptContentVersion_, sourceMetadata), metaDataRoot_, dos_);
+		eConcepts_.loadMetaDataItems(Arrays.asList(ptIds_, ptRefsets_, ptContentVersion_, sourceMetadata, relationshipMetadata), metaDataRoot_, dos_);
 		
 		ptAttributes_ = new PT_Attributes();
 		//dynamically add more attributes from RXNDOC
@@ -427,11 +476,61 @@ public class RxNormMojo extends AbstractMojo
 		}
 		eConcepts_.loadMetaDataItems(ptAttributes_, metaDataRoot_, dos_);
 		
+		//STYPE values
+		ptSTypes_= new PropertyType("STYPEs"){};
+		{
+			Statement s = db_.getConnection().createStatement();
+			ResultSet rs = s.executeQuery("SELECT DISTINCT VALUE, TYPE, EXPL FROM RXNDOC where DOCKEY like 'STYPE%'");
+			while (rs.next())
+			{
+				String sType = rs.getString("VALUE");
+				String type = rs.getString("TYPE");
+				String name = rs.getString("EXPL");
+
+				if (!type.equals("expanded_form"))
+				{
+					throw new RuntimeException("Unexpected type in the attribute data within RXNDOC: '" + type + "'");
+				}				
+				
+				ptSTypes_.addProperty(sType, name, null);
+			}
+			rs.close();
+			s.close();
+		}
+		eConcepts_.loadMetaDataItems(ptSTypes_, metaDataRoot_, dos_);
+		
+		//SUPPRESS values
+		ptSuppress_= new PropertyType("Suppress") {};
+		{
+			Statement s = db_.getConnection().createStatement();
+			ResultSet rs = s.executeQuery("SELECT VALUE, TYPE, EXPL FROM RXNDOC where DOCKEY='SUPPRESS'");
+			while (rs.next())
+			{
+				String value = rs.getString("VALUE");
+				String type = rs.getString("TYPE");
+				String name = rs.getString("EXPL");
+				
+				if (value == null)
+				{
+					//there is a null entry, don't care about it.
+					continue;
+				}
+
+				if (!type.equals("expanded_form"))
+				{
+					throw new RuntimeException("Unexpected type in the attribute data within RXNDOC: '" + type + "'");
+				}				
+				
+				ptSuppress_.addProperty(value, name, null);
+			}
+			rs.close();
+			s.close();
+		}
+		eConcepts_.loadMetaDataItems(ptSuppress_, metaDataRoot_, dos_);
+		
 		// Handle the languages
 		{
-			ptLanguages_ = new PropertyType("Languages")
-			{
-			};
+			ptLanguages_ = new PropertyType("Languages"){};
 			Statement s = db_.getConnection().createStatement();
 			ResultSet rs = s.executeQuery("SELECT * from RXNDOC where DOCKEY = 'LAT'");
 			while (rs.next())
@@ -468,6 +567,75 @@ public class RxNormMojo extends AbstractMojo
 			s.close();
 			eConcepts_.loadMetaDataItems(ptLanguages_, metaDataRoot_, dos_);
 		}
+		
+		// And Source Restriction Levels
+		{
+			ptSourceRestrictionLevels_ = new PropertyType("Source Restriction Levels"){};
+			PreparedStatement ps = db_.getConnection().prepareStatement("SELECT VALUE, TYPE, EXPL from RXNDOC where DOCKEY=? ORDER BY VALUE");
+			ps.setString(1, "SRL");
+			ResultSet rs = ps.executeQuery();
+			
+			String value = null;
+			String description = null;
+			String uri = null;
+			
+			//Two entries per SRL, read two rows, create an entry.
+			
+			while (rs.next())
+			{
+				String type = rs.getString("TYPE");
+				String expl = rs.getString("EXPL");
+				
+				if (type.equals("expanded_form"))
+				{
+					description = expl;
+				}
+				else if (type.equals("uri"))
+				{
+					uri = expl;
+				}
+				else
+				{
+					throw new RuntimeException("oops");
+				}
+					
+				
+				if (value == null)
+				{
+					value = rs.getString("VALUE");
+				}
+				else
+				{
+					if (!value.equals(rs.getString("VALUE")))
+					{
+						throw new RuntimeException("oops");
+					}
+					
+					if (description == null || uri == null)
+					{
+						throw new RuntimeException("oops");
+					}
+					
+					Property p = ptSourceRestrictionLevels_.addProperty(value, null, description);
+					final String temp = uri;
+					p.registerConceptCreationListener(new ConceptCreationNotificationListener()
+					{
+						@Override
+						public void conceptCreated(Property property, EConcept concept)
+						{
+							eConcepts_.addStringAnnotation(concept, temp, ptAttributes_.getProperty("URI").getUUID(), false);
+						}
+					});
+					type = null;
+					expl = null;
+					value = null;
+				}
+			}
+			rs.close();
+			ps.close();
+
+			eConcepts_.loadMetaDataItems(ptSourceRestrictionLevels_, metaDataRoot_, dos_);
+		}
 
 		// And Source vocabularies
 		{
@@ -500,7 +668,15 @@ public class RxNormMojo extends AbstractMojo
 								{
 									String columnName = metadataProperty.getSourcePropertyNameFSN();
 									String columnValue = rs.getString(columnName);
-									eConcepts_.addStringAnnotation(concept, columnValue, metadataProperty.getUUID(), false);
+									if (columnName.equals("SRL"))
+									{
+										eConcepts_.addUuidAnnotation(concept.getConceptAttributes(), ptSourceRestrictionLevels_.getProperty(columnValue).getUUID(),
+												metadataProperty.getUUID());
+									}
+									else
+									{
+										eConcepts_.addStringAnnotation(concept, columnValue, metadataProperty.getUUID(), false);
+									}
 								}
 							}
 							if (rs.next())
@@ -571,8 +747,187 @@ public class RxNormMojo extends AbstractMojo
 
 			eConcepts_.loadMetaDataItems(ptDescriptions_, metaDataRoot_, dos_);
 		}
-	}
+		
+		// And semantic types
+		{
+			PropertyType ptSemanticTypes = new PropertyType("Semantic Types"){};
+			Statement s = db_.getConnection().createStatement();
+			ResultSet rs = s.executeQuery("SELECT distinct TUI, STN, STY from RXNSTY");
+			while (rs.next())
+			{
+				final String tui = rs.getString("TUI");
+				final String stn = rs.getString("STN");
+				String sty = rs.getString("STY");
 
+				Property p = ptSemanticTypes.addProperty(sty);
+				semanticTypes_.put(tui, p.getUUID());
+				p.registerConceptCreationListener(new ConceptCreationNotificationListener()
+				{
+					@Override
+					public void conceptCreated(Property property, EConcept concept)
+					{
+						eConcepts_.addAdditionalIds(concept, tui, ptIds_.getProperty("TUI").getUUID(), false);
+						eConcepts_.addStringAnnotation(concept, stn, ptAttributes_.getProperty("STN").getUUID(), false);
+					}
+				});
+			}
+			rs.close();
+			s.close();
+
+			eConcepts_.loadMetaDataItems(ptSemanticTypes, metaDataRoot_, dos_);
+		}
+		
+		loadRelationshipMetadata(relationshipMetadata);
+	}
+	
+	private void loadRelationshipMetadata(final PropertyType relationshipMetadata) throws Exception
+	{
+		//Both of these get added as extra attributes on the relationship definition
+		HashMap<String, String> snomedCTRelaMappings = new HashMap<>(); //Maps something like 'has_specimen_source_morphology' to '118168003'
+		HashMap<String, String> snomedCTRelMappings = new HashMap<>();  //Maps something like '118168003' to 'RO'
+		
+		nameToRel_ = new HashMap<>();
+		
+		Statement s = db_.getConnection().createStatement();
+		//get the inverses of first, before the expanded forms
+		ResultSet rs = s.executeQuery("SELECT VALUE, TYPE, EXPL FROM RXNDOC where DOCKEY ='REL' or DOCKEY = 'RELA' order by TYPE DESC ");
+		while (rs.next())
+		{
+			String value = rs.getString("VALUE");
+			String type = rs.getString("TYPE");
+			String expl = rs.getString("EXPL");
+			if (value == null)
+			{
+				continue;  //don't need this one
+			}
+			
+			if (type.equals("snomedct_rela_mapping"))
+			{
+				snomedCTRelaMappings.put(expl,  value);
+			}
+			else if (type.equals("snomedct_rel_mapping"))
+			{
+				snomedCTRelMappings.put(value, expl);
+			}
+			else
+			{
+				Relationship rel = nameToRel_.get(value);
+				if (rel == null)
+				{
+					if (type.endsWith("_inverse"))
+					{
+						rel = nameToRel_.get(expl);
+						if (rel == null)
+						{
+							rel = new Relationship();
+							nameToRel_.put(value, rel);
+							nameToRel_.put(expl, rel);
+						}
+						else
+						{
+							throw new RuntimeException("shouldn't happen due to query order");
+						}
+					}
+					else
+					{
+						//only cases where there is no inverse
+						rel = new Relationship();
+						nameToRel_.put(value, rel);
+					}
+				}
+				
+				if (type.equals("expanded_form"))
+				{
+					rel.addNiceName(value, expl);
+				}
+				else if (type.equals("rela_inverse") || type.equals("rel_inverse"))
+				{
+					rel.addRelInverse(value, expl);
+				}
+				else
+				{
+					throw new RuntimeException("Oops");
+				}
+			}
+		}
+		
+		rs.close();
+		s.close();
+		
+		for (Entry<String, String> x : snomedCTRelaMappings.entrySet())
+		{
+			nameToRel_.get(x.getKey()).addSnomedCode(x.getKey(), x.getValue());
+			String relType = snomedCTRelMappings.remove(x.getValue());
+			if (relType != null)
+			{
+				nameToRel_.get(x.getKey()).addRelType(x.getKey(), relType);
+			}
+		}
+		
+		if (snomedCTRelMappings.size() > 0)
+		{
+			throw new RuntimeException("oops");
+		}
+		
+		ptRelationships_ = new BPT_Relations(terminologyName_) {};
+		
+		HashSet<Relationship> uniqueRels = new HashSet<>(nameToRel_.values());
+		for (final Relationship r : uniqueRels)
+		{
+			r.setSwap();
+			
+			Property p = ptRelationships_.addProperty(r.getFSNName(), r.getNiceName(), null);
+			
+			p.registerConceptCreationListener(new ConceptCreationNotificationListener()
+			{
+				@Override
+				public void conceptCreated(Property property, EConcept concept)
+				{
+					if (r.getInverseFSNName() != null)
+					{
+						eConcepts_.addDescription(concept, r.getInverseFSNName(), DescriptionType.FSN, false, null, 
+								relationshipMetadata.getProperty("Inverse FSN").getUUID(), false);
+					}
+					
+					if (r.getInverseNiceName() != null)
+					{
+						eConcepts_.addDescription(concept, r.getInverseNiceName(), DescriptionType.FSN, false, null, 
+								relationshipMetadata.getProperty("Inverse Name").getUUID(), false);
+					}
+					
+					if (r.getRelType() != null)
+					{
+						Relationship generalRel = nameToRel_.get(r.getRelType());
+						
+						eConcepts_.addUuidAnnotation(concept.getConceptAttributes(), ptRelationships_.getProperty(generalRel.getFSNName()).getUUID(), 
+								relationshipMetadata.getProperty("General Rel Type").getUUID());
+					}
+					
+					if (r.getInverseRelType() != null)
+					{
+						Relationship generalRel = nameToRel_.get(r.getInverseRelType());
+						
+						eConcepts_.addUuidAnnotation(concept.getConceptAttributes(), ptRelationships_.getProperty(generalRel.getFSNName()).getUUID(), 
+								relationshipMetadata.getProperty("Inverse General Rel Type").getUUID());
+					}
+					
+					if (r.getRelSnomedCode() != null)
+					{
+						eConcepts_.addUuidAnnotation(concept.getConceptAttributes(), Type3UuidFactory.fromSNOMED(r.getRelSnomedCode()), 
+								relationshipMetadata.getProperty("Snomed Code").getUUID());
+					}
+					
+					if (r.getInverseRelSnomedCode() != null)
+					{
+						eConcepts_.addUuidAnnotation(concept.getConceptAttributes(), Type3UuidFactory.fromSNOMED(r.getInverseRelSnomedCode()), 
+								relationshipMetadata.getProperty("Inverse Snomed Code").getUUID());
+					}
+				}
+			});
+		}
+		
+		eConcepts_.loadMetaDataItems(ptRelationships_, metaDataRoot_, dos_);
+	}
 	private void makeDescriptionType(String fsnName, String preferredName, final Set<String> tty_classes)
 	{
 		// The current possible classes are:
