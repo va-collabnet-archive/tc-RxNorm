@@ -11,7 +11,6 @@ import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Relations
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.ConceptCreationNotificationListener;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.Property;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.PropertyType;
-import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.ValuePropertyPair;
 import gov.va.oia.terminology.converters.sharedUtils.stats.ConverterUUID;
 import gov.va.oia.terminology.converters.umlsUtils.RRFDatabaseHandle;
 import gov.va.oia.terminology.converters.umlsUtils.UMLSFileReader;
@@ -86,8 +85,6 @@ public class RxNormMojo extends AbstractMojo
 
 	private EConcept allRefsetConcept_;
 	private EConcept cpcRefsetConcept_;
-	
-	private long attributeSkip_ = 0;
 
 	/**
 	 * Where RxNorm source files are
@@ -198,7 +195,6 @@ public class RxNormMojo extends AbstractMojo
 			ConsoleUtil.println("Dumping UUID Debug File");
 			ConverterUUID.dump(new File(outputDirectory, "RxNormUuidDebugMap.txt"));
 			ConsoleUtil.writeOutputToFile(new File(outputDirectory, "ConsoleOutput.txt").toPath());
-			ConsoleUtil.println("Skipped " + attributeSkip_ + " attributes to save memory...");
 		}
 		catch (Exception e)
 		{
@@ -286,7 +282,7 @@ public class RxNormMojo extends AbstractMojo
 		EConcept concept = eConcepts_.createConcept(ConverterUUID.createNamespaceUUIDFromString("RXCUI" + conceptData.get(0).rxcui));
 		eConcepts_.addAdditionalIds(concept, conceptData.get(0).rxcui, ptIds_.getProperty("RXCUI").getUUID(), false);
 
-		ArrayList<ValuePropertyPair> descriptions = new ArrayList<>();
+		ArrayList<ValuePropertyPairWithSAB> descriptions = new ArrayList<>();
 		HashMap<UUID, RXNCONSO> descDataMap = new HashMap<>();
 		
 		for (RXNCONSO rowData : conceptData)
@@ -311,8 +307,9 @@ public class RxNormMojo extends AbstractMojo
 			{
 				ConsoleUtil.printErrorln("Non-english lang settings not handled yet!");
 			}
-			descriptions.add(new ValuePropertyPair(rowData.str, descUUID, ptDescriptions_.getProperty(rowData.tty)));
+			descriptions.add(new ValuePropertyPairWithSAB(rowData.str, descUUID, ptDescriptions_.getProperty(rowData.tty), rowData.sab));
 		}
+		//Collections.sort(descriptions);
 		
 		List<TkDescription> createdDescriptions = eConcepts_.addDescriptions(concept, descriptions);
 		//Now finish annotating the descriptions
@@ -352,7 +349,8 @@ public class RxNormMojo extends AbstractMojo
 	
 	private void processAttributes(EConcept concept, String rxcui) throws SQLException
 	{
-		PreparedStatement ps = db_.getConnection().prepareStatement("select * from RXNSAT where RXCUI = ?");
+		//TODO remove this SAB limitation - put in to reduce the dataset for now.
+		PreparedStatement ps = db_.getConnection().prepareStatement("select * from RXNSAT where RXCUI = ? and SAB='RXNORM'");
 		ps.setString(1, rxcui);
 		ResultSet rs = ps.executeQuery();
 		
@@ -362,15 +360,8 @@ public class RxNormMojo extends AbstractMojo
 			rowData.add(new RXNSAT(rs));
 		}
 		
-		int rowCount = 0;
-		
 		for (RXNSAT row : rowData)
 		{
-			if (rowCount > 5)  //TODO figure out how we scale this
-			{
-				attributeSkip_ += rowData.size() - rowCount;
-				break;
-			}
 			//for some reason, ATUI isn't always provided - don't know why.  fallback on randomly generated in those cases.
 			TkRefsetStrMember attribute = eConcepts_.addStringAnnotation(concept.getConceptAttributes(), 
 					(row.atui == null ? null : ConverterUUID.createNamespaceUUIDFromString("ATUI" + row.atui)), row.atv, 
@@ -412,7 +403,6 @@ public class RxNormMojo extends AbstractMojo
 					throw new RuntimeException("Unexpected value in RXNSAT cvf column '" + row.cvf + "'");
 				}
 			}
-			rowCount++;
 		}
 	}
 	
@@ -639,9 +629,7 @@ public class RxNormMojo extends AbstractMojo
 
 		// And Source vocabularies
 		{
-			ptSABs_ = new PropertyType("Source Vocabularies")
-			{
-			};
+			ptSABs_ = new PropertyType("Source Vocabularies"){};
 			Statement s = db_.getConnection().createStatement();
 			ResultSet rs = s.executeQuery("SELECT RSAB, SON from RXNSAB");
 			while (rs.next())
@@ -891,7 +879,7 @@ public class RxNormMojo extends AbstractMojo
 					
 					if (r.getInverseNiceName() != null)
 					{
-						eConcepts_.addDescription(concept, r.getInverseNiceName(), DescriptionType.FSN, false, null, 
+						eConcepts_.addDescription(concept, r.getInverseNiceName(), DescriptionType.SYNONYM, true, null, 
 								relationshipMetadata.getProperty("Inverse Name").getUUID(), false);
 					}
 					
@@ -941,9 +929,11 @@ public class RxNormMojo extends AbstractMojo
 		// expanded
 		// other
 
-		// TODO - Question - do we want to do any ranking based on the SAB?
+		// TODO - Question - do we want to do any other ranking based on the SAB?  Currently, only rank RXNORM sabs higher...  
 		int descriptionRanking;
 
+		//Note - ValuePropertyPairWithSAB overrides the sorting based on these values to kick RXNORM sabs to the top, where 
+		//they will get used as FSN.
 		if (fsnName.equals("FN") && tty_classes.contains("preferred"))
 		{
 			descriptionRanking = BPT_Descriptions.FSN;
