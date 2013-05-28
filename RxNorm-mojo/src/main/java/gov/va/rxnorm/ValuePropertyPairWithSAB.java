@@ -1,6 +1,5 @@
 package gov.va.rxnorm;
 
-import java.util.UUID;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.Property;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.ValuePropertyPair;
 
@@ -9,9 +8,9 @@ public class ValuePropertyPairWithSAB extends ValuePropertyPair
 
 	private String sab_;
 	
-	public ValuePropertyPairWithSAB(String value, UUID descriptionUUID, Property property, String sab)
+	public ValuePropertyPairWithSAB(String value, Property property, String sab)
 	{
-		super(value, descriptionUUID, property);
+		super(value, property);
 		sab_ = sab;
 	}
 
@@ -29,7 +28,4 @@ public class ValuePropertyPairWithSAB extends ValuePropertyPair
 		}
 		return super.compareTo(o);
 	}
-
-	
-	
 }

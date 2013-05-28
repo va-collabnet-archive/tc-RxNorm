@@ -27,5 +27,7 @@ public class PT_Attributes extends BPT_Attributes
 		addProperty("STN", "Semantic Type tree number", null);
 		addProperty("STY", "Semantic Type", null);
 		addProperty("URI");
+		addProperty("RG", null, "Machine generated and unverified indicator");
+		addProperty("RELA Label", null, "More specific relationship label");
 	}
 }

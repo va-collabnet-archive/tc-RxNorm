@@ -12,7 +12,9 @@ public class PT_Refsets extends BPT_Refsets
 	public enum Refsets
 	{
 		ALL("All RxNorm Concepts"),
-		CPC("Current Prescribable Content");
+		CPC("Current Prescribable Content"),
+		CUI_CONCEPTS("All RxNorm CUI Concepts"),
+		AUI_CONCEPTS("All RxNorm AUI Concepts");
 
 		private Property property;
 
