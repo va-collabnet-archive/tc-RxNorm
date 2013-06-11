@@ -64,6 +64,9 @@ import org.ihtsdo.tk.dto.concept.component.relationship.TkRelationship;
  */
 public class RxNormMojo extends AbstractMojo
 {
+	
+	private final boolean liteLoad = true;
+	
 	private String problemListNamespaceSeed_ = "gov.va.med.term.RxNorm";
 	private String terminologyName_ = "RxNorm";
 	private EConceptUtility eConcepts_;
@@ -165,12 +168,13 @@ public class RxNormMojo extends AbstractMojo
 			eConcepts_.addStringAnnotation(allRefsetConcept_, releaseVersion, BaseContentVersion.RELEASE.getProperty().getUUID(), false);
 			
 			//Disable the masterUUID debug map now that the metadata is populated, not enough memory on most systems to maintain it for everything else.
-			//ConverterUUID.disableUUIDMap_ = true;
+			ConverterUUID.disableUUIDMap_ = true;
 			int cuiCounter = 0;
 
 			Statement statement = db_.getConnection().createStatement();
 			//TODO SIZELIMIT - remove SAB restriction
-			ResultSet rs = statement.executeQuery("select RXCUI, LAT, RXAUI, SAUI, SCUI, SAB, TTY, CODE, STR, SUPPRESS, CVF from RXNCONSO where SAB='RXNORM' order by RXCUI" );
+			ResultSet rs = statement.executeQuery("select RXCUI, LAT, RXAUI, SAUI, SCUI, SAB, TTY, CODE, STR, SUPPRESS, CVF from RXNCONSO " 
+					+ (liteLoad ? "where SAB='RXNORM' " : "") + "order by RXCUI" );
 			ArrayList<RXNCONSO> conceptData = new ArrayList<>();
 			while (rs.next())
 			{
@@ -381,7 +385,8 @@ public class RxNormMojo extends AbstractMojo
 	private void processConceptAttributes(EConcept concept, String rxcui, String rxaui) throws SQLException
 	{
 		//TODO SIZELIMIT - remove SAB restriction
-		PreparedStatement ps = db_.getConnection().prepareStatement("select * from RXNSAT where RXCUI = ? and RXAUI = ? and (SAB='RXNORM' or ATN='NDC')");
+		PreparedStatement ps = db_.getConnection().prepareStatement("select * from RXNSAT where RXCUI = ? and RXAUI = ?" 
+				+ (liteLoad ? " and (SAB='RXNORM' or ATN='NDC')" : ""));
 		ps.setString(1, rxcui);
 		ps.setString(2, rxaui);
 		ResultSet rs = ps.executeQuery();
@@ -469,7 +474,8 @@ public class RxNormMojo extends AbstractMojo
 		//TODO SIZELIMIT - remove SAB restriction
 		Statement s = db_.getConnection().createStatement();
 		ResultSet rs = s.executeQuery("Select RXCUI1, RXAUI1, STYPE1, REL, STYPE2, RELA, RUI, SAB, RG, SUPPRESS, CVF from RXNREL where " 
-				+ (isCUI ? "RXCUI2" : "RXAUI2") + "='" + id2 + "' and SAB='RXNORM'" );
+				+ (isCUI ? "RXCUI2" : "RXAUI2") + "='" + id2 + "'" + (liteLoad ? " and SAB='RXNORM'" : ""));
+				
 		while (rs.next())
 		{
 			RXNREL rel = new RXNREL(rs);
