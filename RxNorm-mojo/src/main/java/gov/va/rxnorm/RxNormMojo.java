@@ -146,7 +146,7 @@ public class RxNormMojo extends AbstractMojo
 
 			UUID archRoot = ArchitectonicAuxiliary.Concept.ARCHITECTONIC_ROOT_CONCEPT.getPrimoridalUid();
 			metaDataRoot_ = ConverterUUID.createNamespaceUUIDFromString("metadata");
-			eConcepts_.createAndStoreMetaDataConcept(metaDataRoot_, "RxNorm Metadata", archRoot, dos_);
+			eConcepts_.createAndStoreMetaDataConcept(metaDataRoot_, "RxNorm Metadata", false, archRoot, dos_);
 
 			loadMetaData();
 
