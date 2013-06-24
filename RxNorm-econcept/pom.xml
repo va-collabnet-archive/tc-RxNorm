@@ -31,7 +31,7 @@
 								<fileset>
 									<directory>${project.build.directory}</directory>
 									<includes>
-										<include>RxNorm.jbin</include>
+										<include>RRF-RXN.jbin</include>
 									</includes>
 									<outputDirectory>${project.build.directory}/${project.build.finalName}.zip</outputDirectory>
 								</fileset>

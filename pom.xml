@@ -13,7 +13,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<wb-toolkit.version>2.6.0-trek-146</wb-toolkit.version>
-		<convertersCommonCode.version>2.2-SNAPSHOT</convertersCommonCode.version>
+		<convertersCommonCode.version>2.3-SNAPSHOT</convertersCommonCode.version>
 		<umlsLoaderUtils.version>1.0-SNAPSHOT</umlsLoaderUtils.version>
 	</properties>
 

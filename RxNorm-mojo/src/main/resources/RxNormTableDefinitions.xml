@@ -2,7 +2,7 @@
 
 <DBTABLES xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
 	xsi:noNamespaceSchemaLocation="../../../../../umlsLoaderUtilities/src/main/resources/DatabaseDefinition.xsd">
-	<TABLE name="RXNATOMARCHIVE">
+	<!--TABLE name="RXNATOMARCHIVE">
 		<COLUMN name="RXAUI" type="STRING" size="8" allowNull="false" />
 		<COLUMN name="AUI" type="STRING" size="10" />
 		<COLUMN name="STR" type="STRING" size="4000" allowNull="false" />
@@ -19,7 +19,7 @@
 		<COLUMN name="SAB" type="STRING" size="20" />
 		<COLUMN name="TTY" type="STRING" size="20" />
 		<COLUMN name="MERGED_TO_RXCUI" type="STRING" size="8" />
-	</TABLE>
+	</TABLE-->
 
 	<TABLE name="RXNCONSO">
 		<COLUMN name="RXCUI" type="STRING" size="8" allowNull="false" />
@@ -121,7 +121,7 @@
 		<COLUMN name="EXPL" type="STRING" size="1000" />
 	</TABLE>
 
-	<TABLE name="RXNCUICHANGES">
+	<!--TABLE name="RXNCUICHANGES">
 		<COLUMN name="RXAUI" type="STRING" size="8" />
 		<COLUMN name="CODE" type="STRING" size="50" />
 		<COLUMN name="SAB" type="STRING" size="20" />
@@ -129,13 +129,13 @@
 		<COLUMN name="STR" type="STRING" size="3000" />
 		<COLUMN name="OLD_RXCUI" type="STRING" size="8" allowNull="false" />
 		<COLUMN name="NEW_RXCUI" type="STRING" size="8" allowNull="false" />
-	</TABLE>
+	</TABLE-->
 
-	<TABLE name="RXNCUI">
+	<!-- TABLE name="RXNCUI">
 		<COLUMN name="CUI1" type="STRING" size="8" />
 		<COLUMN name="VER_START" type="STRING" size="20" />
 		<COLUMN name="VER_END" type="STRING" size="20" />
 		<COLUMN name="CARDINALITY" type="STRING" size="8" />
 		<COLUMN name="CUI2" type="STRING" size="8" />
-	</TABLE>
+	</TABLE-->
 </DBTABLES>
