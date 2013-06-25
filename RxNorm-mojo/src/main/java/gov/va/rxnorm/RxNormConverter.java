@@ -53,7 +53,7 @@ public class RxNormConverter extends BaseConverter
 		try
 		{
 			allRefsetConcept_ = ptRefsets_.getConcept(PT_Refsets.Refsets.ALL.getProperty());
-			cpcRefsetConcept_ = ptRefsets_.getConcept(PT_Refsets.Refsets.CPC.getProperty());
+			cpcRefsetConcept_ = ptRefsets_.getConcept("Current Prescribable Content");
 			allCUIRefsetConcept_ = ptRefsets_.getConcept(PT_Refsets.Refsets.CUI_CONCEPTS.getProperty());
 			allAUIRefsetConcept_ = ptRefsets_.getConcept(PT_Refsets.Refsets.AUI_CONCEPTS.getProperty());
 
@@ -94,7 +94,6 @@ public class RxNormConverter extends BaseConverter
 			
 			checkRelationships();
 
-			eConcepts_.storeRefsetConcepts(ptRefsets_, dos_);
 			db_.shutdown();
 			finish();
 		}
@@ -410,7 +409,7 @@ public class RxNormConverter extends BaseConverter
 		}
 	}
 	
-	protected void makeDescriptionType(String fsnName, String preferredName, final Set<String> tty_classes)
+	protected Property makeDescriptionType(String fsnName, String preferredName, final Set<String> tty_classes)
 	{
 		// The current possible classes are:
 		// preferred
@@ -478,23 +477,28 @@ public class RxNormConverter extends BaseConverter
 		{
 			throw new RuntimeException("Unexpected class type");
 		}
-		Property p = ptDescriptions_.addProperty(fsnName, preferredName, null, false, descriptionRanking);
-		p.registerConceptCreationListener(new ConceptCreationNotificationListener()
-		{
-			@Override
-			public void conceptCreated(Property property, EConcept concept)
-			{
-				for (String tty_class : tty_classes)
-				{
-					eConcepts_.addStringAnnotation(concept, tty_class, ptAttributes_.getProperty("tty_class").getUUID(), false);
-				}
-			}
-		});
+		return ptDescriptions_.addProperty(fsnName, preferredName, null, false, descriptionRanking);
 	}
 
 	@Override
 	protected void allDescriptionsCreated()
 	{
 		//noop
+	}
+
+
+
+	@Override
+	protected void loadCustomMetaData() throws Exception
+	{
+		//noop
+	}
+
+
+
+	@Override
+	protected void addCustomRefsets() throws Exception
+	{
+		ptRefsets_.addProperty("Current Prescribable Content");
 	}
 }
