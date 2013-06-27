@@ -67,6 +67,7 @@ public class RxNormMojo extends AbstractMojo
 			loadDatabase();
 			
 			new RxNormConverter(outputDirectory, loaderVersion, releaseVersion, db_);
+			db_.shutdown();
 		}
 		catch (Exception e)
 		{
@@ -132,9 +133,9 @@ public class RxNormMojo extends AbstractMojo
 			ConsoleUtil.showProgress();
 			s.execute("CREATE INDEX sty_tui_index ON RXNSTY (TUI)");
 			ConsoleUtil.showProgress();
-			s.execute("CREATE INDEX rel_rxcui2_index ON RXNREL (RXCUI2)");
+			s.execute("CREATE INDEX rel_rxcui2_index ON RXNREL (RXCUI2, RXAUI2)");
 			ConsoleUtil.showProgress();
-			s.execute("CREATE INDEX rel_rxaui2_index ON RXNREL (RXAUI2)");
+			s.execute("CREATE INDEX rel_rxaui2_index ON RXNREL (RXCUI1, RXAUI1)");
 			ConsoleUtil.showProgress();
 			s.execute("CREATE INDEX rel_rela_index ON RXNREL (RELA)");
 			s.close();

@@ -26,6 +26,7 @@ public class PT_Attributes extends BPT_Attributes
 		addProperty("UMLSAUI");  //This property should be in RXNDOC, but it is currently missing - bug in the data  //TODO remove in future release
 		addProperty("STN", "Semantic Type tree number", null);
 		addProperty("STY", "Semantic Type", null);
+		addProperty("CVF", null, "Content View Flag. Bit field used to flag rows included in Content View.");//note - this is undocumented in RxNorm - used on the STY table - description comes from UMLS
 		addProperty("URI");
 		addProperty("RG", null, "Machine generated and unverified indicator");
 		addProperty("RELA Label", null, "More specific relationship label");
