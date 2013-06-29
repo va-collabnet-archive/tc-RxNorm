@@ -23,12 +23,11 @@ public class PT_Attributes extends BPT_Attributes
 		addProperty("STYPE2", null, "The name of the column in RXNCONSO.RRF that contains the identifier used for the second concept or second atom in the source of the relationship (e.g., 'AUI' or 'CUI')");
 		addProperty("ATUI", null, "Unique identifier for attribute");
 		addProperty("SATUI", null, "Source asserted attribute identifier (optional - present if it exists)");
-		addProperty("UMLSAUI");  //This property should be in RXNDOC, but it is currently missing - bug in the data  //TODO remove in future release
 		addProperty("STN", "Semantic Type tree number", null);
 		addProperty("STY", "Semantic Type", null);
 		addProperty("CVF", null, "Content View Flag. Bit field used to flag rows included in Content View.");//note - this is undocumented in RxNorm - used on the STY table - description comes from UMLS
 		addProperty("URI");
 		addProperty("RG", null, "Machine generated and unverified indicator");
-		addProperty("RELA Label", null, "More specific relationship label");
+		addProperty("Generic rel type", null, "Generic rel type for this relationship");
 	}
 }
