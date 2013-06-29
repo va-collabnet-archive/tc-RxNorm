@@ -265,7 +265,8 @@ public class RxNormMojo extends BaseConverter implements Mojo
 				eConcepts_.addStringAnnotation(auiConcept, rowData.scui, ptUMLSAttributes_.getProperty("SCUI").getUUID(), false);
 			}
 			
-			eConcepts_.addUuidAnnotation(auiConcept, ptSABs_.getProperty(rowData.sab).getUUID(), ptUMLSAttributes_.getProperty("SAB").getUUID());
+			//drop sab, will never be anything but rxnorm due to query
+			//eConcepts_.addUuidAnnotation(auiConcept, ptSABs_.getProperty(rowData.sab).getUUID(), ptUMLSAttributes_.getProperty("SAB").getUUID());
 
 			if (rowData.code != null)
 			{
@@ -443,7 +444,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 		{
 			//String rxcui = rs.getString("RXCUI");
 			//String rxaui = rs.getString("RXAUI");
-			String stype = rs.getString("STYPE");
+			//String stype = rs.getString("STYPE");
 			String code = rs.getString("CODE");
 			String atui = rs.getString("ATUI");
 			String satui = rs.getString("SATUI");
@@ -460,10 +461,11 @@ public class RxNormMojo extends BaseConverter implements Mojo
 					(atui == null ? null : ConverterUUID.createNamespaceUUIDFromString("ATUI" + atui)), atv, 
 					ptTermAttributes_.get("RXNORM").getProperty(atn).getUUID(), false, null);
 			
-			if (stype != null)
-			{
-				eConcepts_.addUuidAnnotation(attribute, ptSTypes_.getProperty(stype).getUUID(), ptUMLSAttributes_.getProperty("STYPE").getUUID());
-			}
+			//dropping for space savings
+//			if (stype != null)
+//			{
+//				eConcepts_.addUuidAnnotation(attribute, ptSTypes_.getProperty(stype).getUUID(), ptUMLSAttributes_.getProperty("STYPE").getUUID());
+//			}
 			
 			if (code != null)
 			{
