@@ -52,7 +52,8 @@
 				</executions>
 			</plugin>
 				
-			<plugin>
+			<!--  Pretty sure this is no longer necessary... test on next deploy -->
+			<!--plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-install-plugin</artifactId>
 				<executions>
@@ -68,6 +69,29 @@
 							<artifactId>${project.artifactId}</artifactId>
 							<packaging>zip</packaging>
 							<version>${project.version}</version>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin-->
+			
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>1.8</version>
+				<executions>
+					<execution>
+						<id>attach-artifacts</id>
+						<phase>package</phase>
+						<goals>
+							<goal>attach-artifact</goal>
+						</goals>
+						<configuration>
+							<artifacts>
+								<artifact>
+									<file>${project.build.directory}/${project.build.finalName}.zip</file>
+									<type>zip</type>
+								</artifact>
+							</artifacts>
 						</configuration>
 					</execution>
 				</executions>
