@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>gov.va.oia.terminology.converters</groupId>
 	<artifactId>RxNorm</artifactId>
-	<version>1.0</version>
+	<version>1.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>RxNorm</name>
 	<description>RxNorm to eConcept converter</description>
@@ -13,8 +13,8 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<wb-toolkit.version>2.6.0-trek-146</wb-toolkit.version>
-		<convertersCommonCode.version>2.3</convertersCommonCode.version>
-		<umlsLoaderUtils.version>1.0</umlsLoaderUtils.version>
+		<convertersCommonCode.version>2.4-SNAPSHOT</convertersCommonCode.version>
+		<umlsLoaderUtils.version>1.1-SNAPSHOT</umlsLoaderUtils.version>
 	</properties>
 
 	<scm>
