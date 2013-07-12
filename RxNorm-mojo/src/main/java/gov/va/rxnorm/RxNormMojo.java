@@ -33,6 +33,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.ihtsdo.etypes.EConcept;
 import org.ihtsdo.tk.dto.concept.component.TkComponent;
 import org.ihtsdo.tk.dto.concept.component.refex.type_string.TkRefsetStrMember;
+import org.ihtsdo.tk.dto.concept.component.relationship.TkRelationship;
 
 /**
  * Goal to build RxNorm
@@ -345,6 +346,22 @@ public class RxNormMojo extends BaseConverter implements Mojo
 		eConcepts_.addRefsetMember(allRefsetConcept_, cuiConcept.getPrimordialUuid(), null, true, null);
 		eConcepts_.addRefsetMember(allCUIRefsetConcept_, cuiConcept.getPrimordialUuid(), null, true, null);
 		cuiConcept.writeExternal(dos_);
+	}
+	
+	@Override
+	protected void processRelCVFAttributes(TkRelationship r, String cvf)
+	{
+		if (cvf != null)
+		{
+			if (cvf.equals("4096"))
+			{
+				eConcepts_.addRefsetMember(cpcRefsetConcept_, r.getPrimordialComponentUuid(), null, true, null);
+			}
+			else
+			{
+				throw new RuntimeException("Unexpected value in RXNSAT cvf column '" + cvf + "'");
+			}
+		}
 	}
 	
 	@Override
