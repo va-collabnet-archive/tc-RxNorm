@@ -15,5 +15,6 @@ public class PT_IDs extends BPT_IDs
 		addProperty("RXAUI", null, "Unique identifier for atom (RxNorm Atom Id)");  //loaded as an attribute and a id
 		addProperty("TUI", null, "Unique identifier of Semantic Type");
 		addProperty("RUI", null, "Unique identifier for Relationship");
+		addProperty("ATUI", null, "Unique identifier for attribute");
 	}
 }

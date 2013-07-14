@@ -478,6 +478,11 @@ public class RxNormMojo extends BaseConverter implements Mojo
 					(atui == null ? null : ConverterUUID.createNamespaceUUIDFromString("ATUI" + atui)), atv, 
 					ptTermAttributes_.get("RXNORM").getProperty(atn).getUUID(), false, null);
 			
+			if (atui != null)
+			{
+				eConcepts_.addAdditionalIds(attribute, atui, ptIds_.getProperty("ATUI").getUUID());
+			}
+			
 			//dropping for space savings
 //			if (stype != null)
 //			{
@@ -488,14 +493,12 @@ public class RxNormMojo extends BaseConverter implements Mojo
 			{
 				eConcepts_.addStringAnnotation(attribute, code, ptUMLSAttributes_.getProperty("CODE").getUUID(), false);
 			}
-			if (atui != null)
-			{
-				eConcepts_.addStringAnnotation(attribute, atui, ptUMLSAttributes_.getProperty("ATUI").getUUID(), false);
-			}
+
 			if (satui != null)
 			{
 				eConcepts_.addStringAnnotation(attribute, satui, ptUMLSAttributes_.getProperty("SATUI").getUUID(), false);
 			}
+			
 			eConcepts_.addUuidAnnotation(attribute, ptSABs_.getProperty(sab).getUUID(), ptUMLSAttributes_.getProperty("SAB").getUUID());
 			if (suppress != null)
 			{
