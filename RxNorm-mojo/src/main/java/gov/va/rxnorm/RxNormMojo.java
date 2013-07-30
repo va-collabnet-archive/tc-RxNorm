@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.zip.ZipEntry;
@@ -280,9 +281,12 @@ public class RxNormMojo extends BaseConverter implements Mojo
 			
 			ArrayList<ValuePropertyPairWithSAB> codeSabDescriptions = new ArrayList<>();
 			
-			HashMap<String, HashSet<String>> sauiValues = new HashMap<>();
-			HashMap<String, HashSet<String>> scuiValues = new HashMap<>();
-			HashMap<String, HashSet<String>> suppressValues = new HashMap<>();
+			//Key the UUID for the concept for the column name to the unique values for the column  to the unique AUIs that say that 
+			HashMap<UUID, HashMap<String, HashSet<String>>> stringAttributes = new HashMap<>();
+			
+			//Key the UUID for the concept for the column name to the UUID of the concept that represents the unique values for the column to the unique AUIs that say that 
+			HashMap<UUID, HashMap<UUID, HashSet<String>>> uuidAttributes = new HashMap<>();
+
 			HashMap<String, HashSet<String>> cvfValues = new HashMap<>();
 		
 			for (RXNCONSO rowData : consoWithSameCodeSab)
@@ -296,36 +300,19 @@ public class RxNormMojo extends BaseConverter implements Mojo
 				
 				if (rowData.saui != null)
 				{
-					HashSet<String> values = sauiValues.get(rowData.saui);
-					if (values == null)
-					{
-						values = new HashSet<>();
-						sauiValues.put(rowData.saui, values);
-					}
-					values.add(rowData.rxaui);
+					addAttributeToGroup(stringAttributes, ptUMLSAttributes_.getProperty("SAUI").getUUID(), rowData.saui, rowData.rxaui);
 				}
 				if (rowData.scui != null)
 				{
-					HashSet<String> values = scuiValues.get(rowData.scui);
-					if (values == null)
-					{
-						values = new HashSet<>();
-						scuiValues.put(rowData.scui, values);
-					}
-					values.add(rowData.rxaui);
+					addAttributeToGroup(stringAttributes, ptUMLSAttributes_.getProperty("SCUI").getUUID(), rowData.scui, rowData.rxaui);
 				}
 				
 				//drop sab, will never be anything but rxnorm due to query
 	
 				if (rowData.suppress != null)
 				{
-					HashSet<String> values = suppressValues.get(rowData.suppress);
-					if (values == null)
-					{
-						values = new HashSet<>();
-						suppressValues.put(rowData.suppress, values);
-					}
-					values.add(rowData.rxaui);
+					addAttributeToGroup(uuidAttributes, ptUMLSAttributes_.getProperty("SUPPRESS").getUUID(), 
+							ptSuppress_.getProperty(rowData.suppress).getUUID(), rowData.rxaui);
 				}
 				
 				if (rowData.cvf != null)
@@ -365,9 +352,8 @@ public class RxNormMojo extends BaseConverter implements Mojo
 				auiRelStatementBackward.setString(1, rowData.rxaui);
 				addRelationships(codeSabConcept, auiRelStatementBackward.executeQuery(), false);
 			}
-			loadStringAttributes(codeSabConcept, "SAUI", "RXAUI", sauiValues);
-			loadStringAttributes(codeSabConcept, "SCUI", "RXAUI", scuiValues);
-			loadUUIDAttributes(codeSabConcept, "SUPPRESS", "RXAUI", suppressValues);
+			loadGroupStringAttributes(codeSabConcept, "RXAUI", stringAttributes);
+			loadGroupUUIDAttributes(codeSabConcept, "RXAUI", uuidAttributes);
 			loadRefsetMembership(codeSabConcept, cvfValues);
 			eConcepts_.addRelationship(codeSabConcept, cuiConcept.getPrimordialUuid(), ptUMLSRelationships_.UMLS_ATOM.getUUID(), null);
 			
