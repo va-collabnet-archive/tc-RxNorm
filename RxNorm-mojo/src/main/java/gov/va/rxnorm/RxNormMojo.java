@@ -57,7 +57,6 @@ public class RxNormMojo extends BaseConverter implements Mojo
 	
 	private PreparedStatement semanticTypeStatement, conSat, cuiRelStatementForward, auiRelStatementForward, cuiRelStatementBackward, auiRelStatementBackward;
 	
-	
 	/**
 	 * Where RxNorm source files are
 	 * 
