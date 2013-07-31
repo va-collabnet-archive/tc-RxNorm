@@ -255,7 +255,9 @@ public class RxNormMojo extends BaseConverter implements Mojo
 			ConsoleUtil.showProgress();
 			s.execute("CREATE INDEX rel_rxaui2_index ON RXNREL (RXCUI1, RXAUI1)");
 			ConsoleUtil.showProgress();
-			s.execute("CREATE INDEX rel_rela_index ON RXNREL (RELA)");
+			s.execute("CREATE INDEX rel_rela_rel_index ON RXNREL (RELA, REL)");  //helps with rel metadata
+			ConsoleUtil.showProgress();
+			s.execute("CREATE INDEX rel_sab_index ON RXNREL (SAB)");  //helps with rel metadata
 			s.close();
 		}
 	}
