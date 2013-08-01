@@ -9,6 +9,7 @@ import gov.va.oia.terminology.converters.sharedUtils.stats.ConverterUUID;
 import gov.va.oia.terminology.converters.umlsUtils.BaseConverter;
 import gov.va.oia.terminology.converters.umlsUtils.RRFDatabaseHandle;
 import gov.va.oia.terminology.converters.umlsUtils.UMLSFileReader;
+import gov.va.oia.terminology.converters.umlsUtils.rrf.REL;
 import gov.va.oia.terminology.converters.umlsUtils.sql.TableDefinition;
 import gov.va.rxnorm.propertyTypes.PT_Attributes;
 import gov.va.rxnorm.propertyTypes.PT_IDs;
@@ -27,9 +28,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.apache.maven.plugin.Mojo;
@@ -124,11 +125,13 @@ public class RxNormMojo extends BaseConverter implements Mojo
 					+ "WHERE RXCUI1 = ? and RXAUI1 is null and r.SAB='RXNORM' and r.RXCUI2 = RXNCONSO.RXCUI and RXNCONSO.SAB='RXNORM'");
 
 			auiRelStatementForward = db_.getConnection().prepareStatement("SELECT r.RXCUI1, r.RXAUI1, r.STYPE1, r.REL, r.RXCUI2, r.RXAUI2, r.STYPE2, "
-					+ "r.RELA, r.RUI, r.SRUI, r.SAB, r.SL, r.DIR, r.RG, r.SUPPRESS, r.CVF from RXNREL as r, RXNCONSO "
+					+ "r.RELA, r.RUI, r.SRUI, r.SAB, r.SL, r.DIR, r.RG, r.SUPPRESS, r.CVF, RXNCONSO.SAB as targetSAB, RXNCONSO.CODE as targetCODE, "
+					+ "RXNCONSO.RXCUI as targetCUI from RXNREL as r, RXNCONSO "
 					+ " WHERE r.RXCUI2 is null and r.RXAUI2=? and r.SAB='RXNORM' and r.RXAUI1 = RXNCONSO.RXAUI and RXNCONSO.SAB='RXNORM'");
 
 			auiRelStatementBackward = db_.getConnection().prepareStatement("SELECT r.RXCUI1, r.RXAUI1, r.STYPE1, r.REL, r.RXCUI2, r.RXAUI2, r.STYPE2, "
-					+ "r.RELA, r.RUI, r.SRUI, r.SAB, r.SL, r.DIR, r.RG, r.SUPPRESS, r.CVF from RXNREL as r, RXNCONSO "
+					+ "r.RELA, r.RUI, r.SRUI, r.SAB, r.SL, r.DIR, r.RG, r.SUPPRESS, r.CVF, RXNCONSO.SAB as targetSAB, RXNCONSO.CODE as targetCODE, "
+					+ "RXNCONSO.RXCUI as targetCUI from RXNREL as r, RXNCONSO "
 					+ " WHERE r.RXCUI1 is null and r.RXAUI1=? and r.SAB='RXNORM' and r.RXAUI2 = RXNCONSO.RXAUI and RXNCONSO.SAB='RXNORM'");
 			
 			//Set this to true if you are trying to load on a limited-memory system...
@@ -265,7 +268,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 	{
 		String rxCui = conceptData.values().iterator().next().get(0).rxcui;
 		
-		EConcept cuiConcept = eConcepts_.createConcept(ConverterUUID.createNamespaceUUIDFromString("CUI" + rxCui, true));
+		EConcept cuiConcept = eConcepts_.createConcept(createCUIConceptUUID(rxCui));
 		eConcepts_.addAdditionalIds(cuiConcept, rxCui, ptIds_.getProperty("RXCUI").getUUID(), false);
 
 		ArrayList<ValuePropertyPairWithSAB> cuiDescriptions = new ArrayList<>();
@@ -273,8 +276,8 @@ public class RxNormMojo extends BaseConverter implements Mojo
 		for (ArrayList<RXNCONSO> consoWithSameCodeSab : conceptData.values())
 		{
 			//Use a combination of CUI/SAB/Code here - otherwise, we have problems with the "NOCODE" values
-			EConcept codeSabConcept = eConcepts_.createConcept(ConverterUUID.createNamespaceUUIDFromString("CODE:" + consoWithSameCodeSab.get(0).rxcui + ":" + 
-					consoWithSameCodeSab.get(0).sab + ":" + consoWithSameCodeSab.get(0).code, true));
+			EConcept codeSabConcept = eConcepts_.createConcept(createCuiSabCodeConceptUUID(consoWithSameCodeSab.get(0).rxcui, 
+					consoWithSameCodeSab.get(0).sab, consoWithSameCodeSab.get(0).code));
 			
 			eConcepts_.addStringAnnotation(codeSabConcept, consoWithSameCodeSab.get(0).code, ptUMLSAttributes_.getProperty("CODE").getUUID(), false);
 
@@ -289,15 +292,14 @@ public class RxNormMojo extends BaseConverter implements Mojo
 			HashMap<UUID, HashMap<UUID, HashSet<String>>> uuidAttributes = new HashMap<>();
 
 			HashMap<String, HashSet<String>> cvfValues = new HashMap<>();
+			
+			ArrayList<REL> forwardRelationships = new ArrayList<>();
+			ArrayList<REL> backwardRelationships = new ArrayList<>();
 		
 			for (RXNCONSO rowData : consoWithSameCodeSab)
 			{
 				//put it in as a string, so users can search for AUI
 				eConcepts_.addAdditionalIds(codeSabConcept, rowData.rxaui, ptIds_.getProperty("RXAUI").getUUID(), false);
-				//Also put it in as a UUID, so we can link the relationships here just by knowing the AUI
-				eConcepts_.addAdditionalIds(codeSabConcept,  ConverterUUID.createNamespaceUUIDFromString("AUI" + rowData.rxaui, true),
-						ptIds_.getProperty("RXAUI").getUUID(), false);
-				
 				
 				if (rowData.saui != null)
 				{
@@ -347,16 +349,18 @@ public class RxNormMojo extends BaseConverter implements Mojo
 				
 				auiRelStatementForward.clearParameters();
 				auiRelStatementForward.setString(1, rowData.rxaui);
-				addRelationships(codeSabConcept, auiRelStatementForward.executeQuery(), true);
+				forwardRelationships.addAll(REL.read(auiRelStatementForward.executeQuery(), true, this));
 				
 				auiRelStatementBackward.clearParameters();
 				auiRelStatementBackward.setString(1, rowData.rxaui);
-				addRelationships(codeSabConcept, auiRelStatementBackward.executeQuery(), false);
+				backwardRelationships.addAll(REL.read(auiRelStatementBackward.executeQuery(), false, this));
 			}
-			loadGroupStringAttributes(codeSabConcept, "RXAUI", stringAttributes);
-			loadGroupUUIDAttributes(codeSabConcept, "RXAUI", uuidAttributes);
+			loadGroupStringAttributes(codeSabConcept.getConceptAttributes(), ptUMLSAttributes_.getProperty("RXAUI").getUUID(), stringAttributes);
+			loadGroupUUIDAttributes(codeSabConcept.getConceptAttributes(), ptUMLSAttributes_.getProperty("RXAUI").getUUID(), uuidAttributes);
 			loadRefsetMembership(codeSabConcept, cvfValues);
 			eConcepts_.addRelationship(codeSabConcept, cuiConcept.getPrimordialUuid(), ptUMLSRelationships_.UMLS_ATOM.getUUID(), null);
+			addRelationships(codeSabConcept, forwardRelationships);
+			addRelationships(codeSabConcept, backwardRelationships);
 			
 			eConcepts_.addRefsetMember(allRefsetConcept_, codeSabConcept.getPrimordialUuid(), null, true, null);
 			eConcepts_.addRefsetMember(allAUIRefsetConcept_, codeSabConcept.getPrimordialUuid(), null, true, null);
@@ -364,6 +368,8 @@ public class RxNormMojo extends BaseConverter implements Mojo
 			
 			eConcepts_.addDescriptions(codeSabConcept, codeSabDescriptions);
 			codeSabConcept.writeExternal(dos_);
+			//disabled debug code
+			//conceptUUIDsCreated_.add(codeSabConcept.getPrimordialUuid());
 		}
 		
 		//Pick the 'best' description to use on the cui concept
@@ -381,15 +387,17 @@ public class RxNormMojo extends BaseConverter implements Mojo
 		
 		cuiRelStatementForward.clearParameters();
 		cuiRelStatementForward.setString(1, rxCui);
-		addRelationships(cuiConcept, cuiRelStatementForward.executeQuery(), true);
+		addRelationships(cuiConcept, REL.read(cuiRelStatementForward.executeQuery(), true, this));
 		
 		cuiRelStatementBackward.clearParameters();
 		cuiRelStatementBackward.setString(1, rxCui);
-		addRelationships(cuiConcept, cuiRelStatementBackward.executeQuery(), false);
+		addRelationships(cuiConcept, REL.read(cuiRelStatementBackward.executeQuery(), false, this));
 
 		eConcepts_.addRefsetMember(allRefsetConcept_, cuiConcept.getPrimordialUuid(), null, true, null);
 		eConcepts_.addRefsetMember(allCUIRefsetConcept_, cuiConcept.getPrimordialUuid(), null, true, null);
 		cuiConcept.writeExternal(dos_);
+		//disabled debug code
+		//conceptUUIDsCreated_.add(cuiConcept.getPrimordialUuid());
 	}
 	
 	/**
@@ -417,17 +425,31 @@ public class RxNormMojo extends BaseConverter implements Mojo
 	
 
 	@Override
-	protected void processRelCVFAttributes(TkRelationship r, String cvf)
+	protected void processRelCVFAttributes(TkRelationship r, List<REL> duplicateRelationships)
 	{
-		if (cvf != null)
+		TkRefexUuidMember member = null;
+		for (REL dupeRel : duplicateRelationships)
 		{
-			if (cvf.equals("4096"))
+			if (dupeRel.getCvf() != null)
 			{
-				eConcepts_.addRefsetMember(cpcRefsetConcept_, r.getPrimordialComponentUuid(), null, true, null);
-			}
-			else
-			{
-				throw new RuntimeException("Unexpected value in RXNSAT cvf column '" + cvf + "'");
+				if (dupeRel.getCvf().equals("4096"))
+				{
+					if (member == null)
+					{
+						member = eConcepts_.addRefsetMember(cpcRefsetConcept_, r.getPrimordialComponentUuid(), null, true, null);
+						eConcepts_.addStringAnnotation(member, dupeRel.getSourceTargetAnnotationLabel(), 
+								ptRelationshipMetadata_.getProperty("sAUI & tAUI").getUUID(), false);
+					}
+					else
+					{
+						eConcepts_.addStringAnnotation(member, dupeRel.getSourceTargetAnnotationLabel(), 
+								ptRelationshipMetadata_.getProperty("sAUI & tAUI").getUUID(), false);
+					}
+				}
+				else
+				{
+					throw new RuntimeException("Unexpected value in RXNSAT cvf column '" + dupeRel.getCvf() + "'");
+				}
 			}
 		}
 	}
@@ -528,7 +550,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 		{
 			//String rxcui = rs.getString("RXCUI");
 			String rxaui = rs.getString("RXAUI");
-			String stype = rs.getString("STYPE");
+			//String stype = rs.getString("STYPE");
 			String code = rs.getString("CODE");
 			String atui = rs.getString("ATUI");
 			String satui = rs.getString("SATUI");
@@ -591,11 +613,8 @@ public class RxNormMojo extends BaseConverter implements Mojo
 				}
 			}
 			
-			if (!stype.equals("SRUI"))
-			{
-				//When we are processing MRCONSO SATS (not rel SATs) add an attribute that says which AUI this attribute came from
-				eConcepts_.addStringAnnotation(attribute, rxaui, ptUMLSAttributes_.getProperty("RXAUI").getUUID(), false);
-			}
+			//Add an attribute that says which AUI this attribute came from
+			eConcepts_.addStringAnnotation(attribute, rxaui, ptUMLSAttributes_.getProperty("RXAUI").getUUID(), false);
 		}
 		rs.close();
 	}
