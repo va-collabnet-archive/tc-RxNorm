@@ -9,6 +9,7 @@ import gov.va.oia.terminology.converters.sharedUtils.stats.ConverterUUID;
 import gov.va.oia.terminology.converters.umlsUtils.BaseConverter;
 import gov.va.oia.terminology.converters.umlsUtils.RRFDatabaseHandle;
 import gov.va.oia.terminology.converters.umlsUtils.UMLSFileReader;
+import gov.va.oia.terminology.converters.umlsUtils.ValuePropertyPairWithAttributes;
 import gov.va.oia.terminology.converters.umlsUtils.rrf.REL;
 import gov.va.oia.terminology.converters.umlsUtils.sql.TableDefinition;
 import gov.va.rxnorm.propertyTypes.PT_Attributes;
@@ -26,17 +27,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.apache.maven.plugin.Mojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.ihtsdo.etypes.EConcept;
 import org.ihtsdo.tk.dto.concept.component.TkComponent;
+import org.ihtsdo.tk.dto.concept.component.description.TkDescription;
 import org.ihtsdo.tk.dto.concept.component.refex.type_string.TkRefsetStrMember;
 import org.ihtsdo.tk.dto.concept.component.refex.type_uuid.TkRefexUuidMember;
 import org.ihtsdo.tk.dto.concept.component.relationship.TkRelationship;
@@ -285,14 +284,6 @@ public class RxNormMojo extends BaseConverter implements Mojo
 			
 			ArrayList<ValuePropertyPairWithSAB> codeSabDescriptions = new ArrayList<>();
 			
-			//Key the UUID for the concept for the column name to the unique values for the column  to the unique AUIs that say that 
-			HashMap<UUID, HashMap<String, HashSet<String>>> stringAttributes = new HashMap<>();
-			
-			//Key the UUID for the concept for the column name to the UUID of the concept that represents the unique values for the column to the unique AUIs that say that 
-			HashMap<UUID, HashMap<UUID, HashSet<String>>> uuidAttributes = new HashMap<>();
-
-			HashMap<String, HashSet<String>> cvfValues = new HashMap<>();
-			
 			ArrayList<REL> forwardRelationships = new ArrayList<>();
 			ArrayList<REL> backwardRelationships = new ArrayList<>();
 		
@@ -301,32 +292,40 @@ public class RxNormMojo extends BaseConverter implements Mojo
 				//put it in as a string, so users can search for AUI
 				eConcepts_.addAdditionalIds(codeSabConcept, rowData.rxaui, ptIds_.getProperty("RXAUI").getUUID(), false);
 				
+				ValuePropertyPairWithSAB desc = new ValuePropertyPairWithSAB(rowData.str, ptDescriptions_.get(rowData.sab).getProperty(rowData.tty), rowData.sab);
+				if (consoWithSameCodeSab.size() > 1)
+				{
+					desc.addStringAttribute(ptUMLSAttributes_.getProperty("RXAUI").getUUID(), rowData.rxaui);
+				}
+				
 				if (rowData.saui != null)
 				{
-					addAttributeToGroup(stringAttributes, ptUMLSAttributes_.getProperty("SAUI").getUUID(), rowData.saui, rowData.rxaui);
+					desc.addStringAttribute(ptUMLSAttributes_.getProperty("SAUI").getUUID(), rowData.saui);
 				}
 				if (rowData.scui != null)
 				{
-					addAttributeToGroup(stringAttributes, ptUMLSAttributes_.getProperty("SCUI").getUUID(), rowData.scui, rowData.rxaui);
+					
+					desc.addStringAttribute(ptUMLSAttributes_.getProperty("SCUI").getUUID(), rowData.scui);
 				}
 				
 				//drop sab, will never be anything but rxnorm due to query
 	
 				if (rowData.suppress != null)
 				{
-					addAttributeToGroup(uuidAttributes, ptUMLSAttributes_.getProperty("SUPPRESS").getUUID(), 
-							ptSuppress_.getProperty(rowData.suppress).getUUID(), rowData.rxaui);
+					
+					desc.addUUIDAttribute(ptUMLSAttributes_.getProperty("SUPPRESS").getUUID(), ptSuppress_.getProperty(rowData.suppress).getUUID());
 				}
 				
 				if (rowData.cvf != null)
 				{
-					HashSet<String> values = cvfValues.get(rowData.cvf);
-					if (values == null)
+					if (rowData.cvf.equals("4096"))
 					{
-						values = new HashSet<>();
-						cvfValues.put(rowData.cvf, values);
+						desc.addRefsetMembership(cpcRefsetConcept_);
 					}
-					values.add(rowData.rxaui);
+					else
+					{
+						throw new RuntimeException("Unexpected value in RXNCONSO cvf column '" + rowData.cvf + "'");
+					}
 				}
 				// T-ODO handle language - not currently a 'live' todo, because RxNorm only has ENG at the moment.
 				if (!rowData.lat.equals("ENG"))
@@ -334,7 +333,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 					ConsoleUtil.printErrorln("Non-english lang settings not handled yet!");
 				}
 				
-				ValuePropertyPairWithSAB desc = new ValuePropertyPairWithSAB(rowData.str, ptDescriptions_.get(rowData.sab).getProperty(rowData.tty), rowData.sab);
+				
 				//used for sorting description to find one for the CUI concept
 				cuiDescriptions.add(desc);
 				//Used for picking the best description for this code/sab concept
@@ -345,7 +344,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 				conSat.setString(1, rowData.rxcui);
 				conSat.setString(2, rowData.rxaui);
 				ResultSet rs = conSat.executeQuery();
-				processSAT(codeSabConcept.getConceptAttributes(), rs, rowData.code, rowData.sab);
+				processSAT(codeSabConcept.getConceptAttributes(), rs, rowData.code, rowData.sab, consoWithSameCodeSab.size() == 1);
 				
 				auiRelStatementForward.clearParameters();
 				auiRelStatementForward.setString(1, rowData.rxaui);
@@ -355,9 +354,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 				auiRelStatementBackward.setString(1, rowData.rxaui);
 				backwardRelationships.addAll(REL.read(auiRelStatementBackward.executeQuery(), false, this));
 			}
-			loadGroupStringAttributes(codeSabConcept.getConceptAttributes(), ptUMLSAttributes_.getProperty("RXAUI").getUUID(), stringAttributes);
-			loadGroupUUIDAttributes(codeSabConcept.getConceptAttributes(), ptUMLSAttributes_.getProperty("RXAUI").getUUID(), uuidAttributes);
-			loadRefsetMembership(codeSabConcept, cvfValues);
+			
 			eConcepts_.addRelationship(codeSabConcept, cuiConcept.getPrimordialUuid(), ptUMLSRelationships_.UMLS_ATOM.getUUID(), null);
 			addRelationships(codeSabConcept, forwardRelationships);
 			addRelationships(codeSabConcept, backwardRelationships);
@@ -366,7 +363,8 @@ public class RxNormMojo extends BaseConverter implements Mojo
 			eConcepts_.addRefsetMember(allAUIRefsetConcept_, codeSabConcept.getPrimordialUuid(), null, true, null);
 			eConcepts_.addRefsetMember(ptRefsets_.get(sab).getConcept(terminologyCodeRefsetPropertyName_.get(sab)) , codeSabConcept.getPrimordialUuid(), null, true, null);
 			
-			eConcepts_.addDescriptions(codeSabConcept, codeSabDescriptions);
+			List<TkDescription> addedDescriptions = eConcepts_.addDescriptions(codeSabConcept, codeSabDescriptions);
+			ValuePropertyPairWithAttributes.processAttributes(eConcepts_, codeSabDescriptions, addedDescriptions);
 			codeSabConcept.writeExternal(dos_);
 			//disabled debug code
 			//conceptUUIDsCreated_.add(codeSabConcept.getPrimordialUuid());
@@ -399,30 +397,6 @@ public class RxNormMojo extends BaseConverter implements Mojo
 		//disabled debug code
 		//conceptUUIDsCreated_.add(cuiConcept.getPrimordialUuid());
 	}
-	
-	/**
-	 * Add the attribute value(s) of the given type, with nested attributes linking to the AUI(s) that they came from.  
-	 */
-	protected void loadRefsetMembership(EConcept concept, HashMap<String, HashSet<String>> values)
-	{
-		for (Entry<String, HashSet<String>> valueAui : values.entrySet())
-		{
-			String value = valueAui.getKey();
-			if (value.equals("4096"))
-			{
-				TkRefexUuidMember attribute = eConcepts_.addRefsetMember(cpcRefsetConcept_, concept.getPrimordialUuid(), null, true, null);
-				for (String aui : valueAui.getValue())
-				{
-					eConcepts_.addStringAnnotation(attribute, aui, ptUMLSAttributes_.getProperty("RXAUI").getUUID(), false);
-				}
-			}
-			else
-			{
-				throw new RuntimeException("Unexpected value in RXNCONSO cvf column '" + value + "'");
-			}
-		}
-	}
-	
 
 	@Override
 	protected void processRelCVFAttributes(TkRelationship r, List<REL> duplicateRelationships)
@@ -544,7 +518,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 	}
 
 	@Override
-	protected void processSAT(TkComponent<?> itemToAnnotate, ResultSet rs, String itemCode, String itemSab) throws SQLException
+	protected void processSAT(TkComponent<?> itemToAnnotate, ResultSet rs, String itemCode, String itemSab, boolean skipAuiAnnotation) throws SQLException
 	{
 		while (rs.next())
 		{
@@ -613,8 +587,11 @@ public class RxNormMojo extends BaseConverter implements Mojo
 				}
 			}
 			
-			//Add an attribute that says which AUI this attribute came from
-			eConcepts_.addStringAnnotation(attribute, rxaui, ptUMLSAttributes_.getProperty("RXAUI").getUUID(), false);
+			if (!skipAuiAnnotation)
+			{
+				//Add an attribute that says which AUI this attribute came from
+				eConcepts_.addStringAnnotation(attribute, rxaui, ptUMLSAttributes_.getProperty("RXAUI").getUUID(), false);
+			}
 		}
 		rs.close();
 	}

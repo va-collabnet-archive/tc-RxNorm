@@ -2,10 +2,10 @@ package gov.va.rxnorm;
 
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.Property;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.ValuePropertyPair;
+import gov.va.oia.terminology.converters.umlsUtils.ValuePropertyPairWithAttributes;
 
-public class ValuePropertyPairWithSAB extends ValuePropertyPair
+public class ValuePropertyPairWithSAB extends ValuePropertyPairWithAttributes
 {
-
 	private String sab_;
 	
 	public ValuePropertyPairWithSAB(String value, Property property, String sab)
