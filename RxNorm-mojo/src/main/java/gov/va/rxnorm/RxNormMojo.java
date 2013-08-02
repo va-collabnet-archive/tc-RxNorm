@@ -99,7 +99,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 
 			loadDatabase();
 			
-			init(outputDirectory, "RxNorm", "RXN", new PT_IDs(), new PT_Attributes(), Arrays.asList(new String[] {"RXNORM"}));
+			init(outputDirectory, "RxNorm", "RXN", new PT_IDs(), new PT_Attributes(), Arrays.asList(new String[] {"RXNORM"}), null);
 			
 			allRefsetConcept_ = ptUMLSRefsets_.getConcept(ptUMLSRefsets_.ALL.getSourcePropertyNameFSN());
 			allCUIRefsetConcept_ = ptUMLSRefsets_.getConcept(ptUMLSRefsets_.CUI_CONCEPTS.getSourcePropertyNameFSN());
