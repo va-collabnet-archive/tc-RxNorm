@@ -355,7 +355,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 				backwardRelationships.addAll(REL.read(auiRelStatementBackward.executeQuery(), false, this));
 			}
 			
-			eConcepts_.addRelationship(codeSabConcept, cuiConcept.getPrimordialUuid(), ptUMLSRelationships_.UMLS_ATOM.getUUID(), null);
+			eConcepts_.addRelationship(codeSabConcept, cuiConcept.getPrimordialUuid(), ptUMLSRelationships_.UMLS_CUI.getUUID(), null);
 			addRelationships(codeSabConcept, forwardRelationships);
 			addRelationships(codeSabConcept, backwardRelationships);
 			
