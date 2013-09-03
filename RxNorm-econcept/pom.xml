@@ -51,29 +51,6 @@
 					</execution>
 				</executions>
 			</plugin>
-				
-			<!--  Pretty sure this is no longer necessary... test on next deploy -->
-			<!--plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-install-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>install-jbin-file</id>
-						<phase>install</phase>
-						<goals>
-							<goal>install-file</goal>
-						</goals>
-						<configuration>
-							<file>${project.build.directory}/${project.build.finalName}.zip</file>
-							<groupId>${project.groupId}</groupId>
-							<artifactId>${project.artifactId}</artifactId>
-							<packaging>zip</packaging>
-							<version>${project.version}</version>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin-->
-			
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>build-helper-maven-plugin</artifactId>
