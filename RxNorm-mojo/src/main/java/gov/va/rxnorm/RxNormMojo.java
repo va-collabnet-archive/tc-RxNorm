@@ -348,11 +348,11 @@ public class RxNormMojo extends BaseConverter implements Mojo
 				
 				auiRelStatementForward.clearParameters();
 				auiRelStatementForward.setString(1, rowData.rxaui);
-				forwardRelationships.addAll(REL.read(auiRelStatementForward.executeQuery(), true, this));
+				forwardRelationships.addAll(REL.read(rowData.sab, auiRelStatementForward.executeQuery(), true, this));
 				
 				auiRelStatementBackward.clearParameters();
 				auiRelStatementBackward.setString(1, rowData.rxaui);
-				backwardRelationships.addAll(REL.read(auiRelStatementBackward.executeQuery(), false, this));
+				backwardRelationships.addAll(REL.read(rowData.sab, auiRelStatementBackward.executeQuery(), false, this));
 			}
 			
 			eConcepts_.addRelationship(codeSabConcept, cuiConcept.getPrimordialUuid(), ptUMLSRelationships_.UMLS_CUI.getUUID(), null);
@@ -385,11 +385,11 @@ public class RxNormMojo extends BaseConverter implements Mojo
 		
 		cuiRelStatementForward.clearParameters();
 		cuiRelStatementForward.setString(1, rxCui);
-		addRelationships(cuiConcept, REL.read(cuiRelStatementForward.executeQuery(), true, this));
+		addRelationships(cuiConcept, REL.read(null, cuiRelStatementForward.executeQuery(), true, this));
 		
 		cuiRelStatementBackward.clearParameters();
 		cuiRelStatementBackward.setString(1, rxCui);
-		addRelationships(cuiConcept, REL.read(cuiRelStatementBackward.executeQuery(), false, this));
+		addRelationships(cuiConcept, REL.read(null, cuiRelStatementBackward.executeQuery(), false, this));
 
 		eConcepts_.addRefsetMember(allRefsetConcept_, cuiConcept.getPrimordialUuid(), null, true, null);
 		eConcepts_.addRefsetMember(allCUIRefsetConcept_, cuiConcept.getPrimordialUuid(), null, true, null);
