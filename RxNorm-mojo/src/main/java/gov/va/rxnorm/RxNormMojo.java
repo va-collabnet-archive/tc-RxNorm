@@ -429,7 +429,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 	}
 	
 	@Override
-	protected Property makeDescriptionType(String fsnName, String preferredName, final Set<String> tty_classes)
+	protected Property makeDescriptionType(String fsnName, String preferredName, String altName, String description, final Set<String> tty_classes)
 	{
 		// The current possible classes are:
 		// preferred
@@ -442,61 +442,61 @@ public class RxNormMojo extends BaseConverter implements Mojo
 		// expanded
 		// other
 
-		int descriptionRanking;
+		int descriptionTypeRanking;
 
 		//Note - ValuePropertyPairWithSAB overrides the sorting based on these values to kick RXNORM sabs to the top, where 
 		//they will get used as FSN.
 		if (fsnName.equals("FN") && tty_classes.contains("preferred"))
 		{
-			descriptionRanking = BPT_Descriptions.FSN;
+			descriptionTypeRanking = BPT_Descriptions.FSN;
 		}
 		else if (fsnName.equals("FN"))
 		{
-			descriptionRanking = BPT_Descriptions.FSN + 1;
+			descriptionTypeRanking = BPT_Descriptions.FSN + 1;
 		}
 		// preferred gets applied with others as well, in some cases. Don't want 'preferred' 'obsolete' at the top.
 		//Just preferred, and we make it the top synonym.
 		else if (tty_classes.contains("preferred") && tty_classes.size() == 1)
 		{
-			descriptionRanking = BPT_Descriptions.SYNONYM;
+			descriptionTypeRanking = BPT_Descriptions.SYNONYM;
 		}
 		else if (tty_classes.contains("entry_term"))
 		{
-			descriptionRanking = BPT_Descriptions.SYNONYM + 1;
+			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 1;
 		}
 		else if (tty_classes.contains("synonym"))
 		{
-			descriptionRanking = BPT_Descriptions.SYNONYM + 2;
+			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 2;
 		}
 		else if (tty_classes.contains("expanded"))
 		{
-			descriptionRanking = BPT_Descriptions.SYNONYM + 3;
+			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 3;
 		}
 		else if (tty_classes.contains("abbreviation"))
 		{
-			descriptionRanking = BPT_Descriptions.SYNONYM + 4;
+			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 4;
 		}
 		else if (tty_classes.contains("attribute"))
 		{
-			descriptionRanking = BPT_Descriptions.SYNONYM + 5;
+			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 5;
 		}
 		else if (tty_classes.contains("hierarchical"))
 		{
-			descriptionRanking = BPT_Descriptions.SYNONYM + 6;
+			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 6;
 		}
 		else if (tty_classes.contains("other"))
 		{
-			descriptionRanking = BPT_Descriptions.SYNONYM + 7;
+			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 7;
 		}
 		else if (tty_classes.contains("obsolete"))
 		{
-			descriptionRanking = BPT_Descriptions.SYNONYM + 8;
+			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 8;
 		}
 		else
 		{
 			throw new RuntimeException("Unexpected class type");
 		}
-		return new Property(null, fsnName, preferredName, null, false, descriptionRanking);
+		return new Property(null, fsnName, preferredName, altName, description, false, descriptionTypeRanking);
 	}
 
 	@Override

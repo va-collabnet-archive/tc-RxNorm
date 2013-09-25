@@ -11,10 +11,11 @@ public class PT_IDs extends BPT_IDs
 	public PT_IDs()
 	{
 		super();
-		addProperty("RXCUI", null, "RxNorm Unique identifier for concept (concept ID)");
-		addProperty("RXAUI", null, "Unique identifier for atom (RxNorm Atom Id)");  //loaded as an attribute and a id
-		addProperty("TUI", null, "Unique identifier of Semantic Type");
-		addProperty("RUI", null, "Unique identifier for Relationship");
-		addProperty("ATUI", null, "Unique identifier for attribute");
+		indexByAltNames();
+		addProperty("RxNorm Unique identifier for concept", null, "RXCUI", "(RxNorm Concept ID)");
+		addProperty("Unique identifier for atom", null, "RXAUI", "(RxNorm Atom ID)");  //loaded as an attribute and a id
+		addProperty("Unique identifier of Semantic Type", null, "TUI", null);
+		addProperty("Unique identifier for Relationship", null, "RUI", null);
+		addProperty("Unique identifier for attribute", null, "ATUI", null);
 	}
 }
