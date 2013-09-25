@@ -4,14 +4,14 @@
 	<parent>
 		<artifactId>RxNorm</artifactId>
 		<groupId>gov.va.oia.terminology.converters</groupId>
-		<version>1.2-SNAPSHOT</version>
+		<version>1.2</version>
 	</parent>
 
 	<artifactId>RxNorm-econcept</artifactId>
 	<packaging>pom</packaging>
 	<name>RxNorm-econcept</name>
 	<!-- this should be set to ${sourceData.version}-loader-${project.parent.version} but that doesn't appease the maven gods that know best.... -->
-	<version>2013.05.06-loader-1.2-SNAPSHOT</version>
+	<version>2013.05.06-loader-1.2</version>
 
 	<properties>
 		<sourceData.version>2013.05.06</sourceData.version>
