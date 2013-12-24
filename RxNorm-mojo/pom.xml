@@ -4,7 +4,7 @@
 	<parent>
 		<artifactId>RxNorm</artifactId>
 		<groupId>gov.va.oia.terminology.converters</groupId>
-		<version>1.2</version>
+		<version>1.3</version>
 	</parent>
 
 	<artifactId>RxNorm-mojo</artifactId>

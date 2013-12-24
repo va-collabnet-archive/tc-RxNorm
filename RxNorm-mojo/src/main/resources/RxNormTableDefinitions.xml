@@ -64,7 +64,7 @@
 	<TABLE name="RXNSAB">
 		<COLUMN name="VCUI" type="STRING" size="8" />
 		<COLUMN name="RCUI" type="STRING" size="8" />
-		<COLUMN name="VSAB" type="STRING" size="20" />
+		<COLUMN name="VSAB" type="STRING" size="40" />
 		<COLUMN name="RSAB" type="STRING" size="20" allowNull="false" />
 		<COLUMN name="SON" type="STRING" size="3000" />
 		<COLUMN name="SF" type="STRING" size="20" />
