@@ -472,29 +472,33 @@ public class RxNormMojo extends BaseConverter implements Mojo
 		{
 			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 3;
 		}
-		else if (tty_classes.contains("abbreviation"))
+		else if (tty_classes.contains("Prescribable Name"))
 		{
 			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 4;
 		}
-		else if (tty_classes.contains("attribute"))
+		else if (tty_classes.contains("abbreviation"))
 		{
 			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 5;
 		}
-		else if (tty_classes.contains("hierarchical"))
+		else if (tty_classes.contains("attribute"))
 		{
 			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 6;
 		}
-		else if (tty_classes.contains("other"))
+		else if (tty_classes.contains("hierarchical"))
 		{
 			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 7;
 		}
-		else if (tty_classes.contains("obsolete"))
+		else if (tty_classes.contains("other"))
 		{
 			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 8;
 		}
+		else if (tty_classes.contains("obsolete"))
+		{
+			descriptionTypeRanking = BPT_Descriptions.SYNONYM + 9;
+		}
 		else
 		{
-			throw new RuntimeException("Unexpected class type");
+			throw new RuntimeException("Unexpected class type " + Arrays.toString(tty_classes.toArray()));
 		}
 		return new Property(null, fsnName, preferredName, altName, description, false, descriptionTypeRanking);
 	}
