@@ -12,9 +12,7 @@
 	<!-- properties -->
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<wb-toolkit.version>2.32-trek-no-jini-va-1.25</wb-toolkit.version>
-		<convertersCommonCode.version>2.6.1</convertersCommonCode.version>
-		<umlsLoaderUtils.version>1.3.3</umlsLoaderUtils.version>
+		<umlsLoaderUtils.version>2.0-SNAPSHOT</umlsLoaderUtils.version>
 	</properties>
 
 	<scm>
@@ -33,24 +31,6 @@
 				<version>2.0</version>
 			</dependency>
 			<dependency>
-				<groupId>org.ihtsdo</groupId>
-				<artifactId>wb-foundation</artifactId>
-				<version>${wb-toolkit.version}</version>
-				<scope>compile</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.ihtsdo</groupId>
-				<artifactId>wb-api</artifactId>
-				<version>${wb-toolkit.version}</version>
-				<scope>compile</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.ihtsdo</groupId>
-				<artifactId>wb-bdb</artifactId>
-				<version>${wb-toolkit.version}</version>
-				<scope>compile</scope>
-			</dependency>
-			<dependency>
 				<groupId>javax.xml</groupId>
 				<artifactId>jaxp-api</artifactId>
 				<version>1.4.2</version>
@@ -60,12 +40,6 @@
 				<groupId>org.jdom</groupId>
 				<artifactId>jdom</artifactId>
 				<version>1.1</version>
-			</dependency>
-			<dependency>
-				<groupId>gov.va.oia.terminology.converters</groupId>
-				<artifactId>convertersCommonCode</artifactId>
-				<version>${convertersCommonCode.version}</version>
-				<scope>compile</scope>
 			</dependency>
 			<dependency>
 				<groupId>gov.va.oia.terminology.converters</groupId>

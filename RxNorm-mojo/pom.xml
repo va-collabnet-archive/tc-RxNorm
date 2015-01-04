@@ -22,21 +22,6 @@
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.ihtsdo</groupId>
-			<artifactId>wb-foundation</artifactId>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.ihtsdo</groupId>
-			<artifactId>wb-api</artifactId>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.ihtsdo</groupId>
-			<artifactId>wb-bdb</artifactId>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
 			<groupId>gov.va.oia.terminology.converters</groupId>
 			<artifactId>convertersCommonCode</artifactId>
 			<scope>compile</scope>

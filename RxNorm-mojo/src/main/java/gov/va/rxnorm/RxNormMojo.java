@@ -3,7 +3,7 @@ package gov.va.rxnorm;
 import gov.va.oia.terminology.converters.sharedUtils.ConsoleUtil;
 import gov.va.oia.terminology.converters.sharedUtils.EConceptUtility.DescriptionType;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Descriptions;
-import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Refsets;
+import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_MemberRefsets;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.Property;
 import gov.va.oia.terminology.converters.sharedUtils.stats.ConverterUUID;
 import gov.va.oia.terminology.converters.umlsUtils.BaseConverter;
@@ -12,7 +12,7 @@ import gov.va.oia.terminology.converters.umlsUtils.UMLSFileReader;
 import gov.va.oia.terminology.converters.umlsUtils.ValuePropertyPairWithAttributes;
 import gov.va.oia.terminology.converters.umlsUtils.rrf.REL;
 import gov.va.oia.terminology.converters.umlsUtils.sql.TableDefinition;
-import gov.va.rxnorm.propertyTypes.PT_Attributes;
+import gov.va.rxnorm.propertyTypes.PT_Annotations;
 import gov.va.rxnorm.propertyTypes.PT_IDs;
 import gov.va.rxnorm.rrf.RXNCONSO;
 import java.io.BufferedReader;
@@ -98,7 +98,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 
 			loadDatabase();
 			
-			init(outputDirectory, "RxNorm", "RXN", new PT_IDs(), new PT_Attributes(), Arrays.asList(new String[] {"RXNORM"}), null);
+			init(outputDirectory, "RxNorm", "RXN", new PT_IDs(), new PT_Annotations(), Arrays.asList(new String[] {"RXNORM"}), null);
 			
 			allRefsetConcept_ = ptUMLSRefsets_.getConcept(ptUMLSRefsets_.ALL.getSourcePropertyNameFSN());
 			allCUIRefsetConcept_ = ptUMLSRefsets_.getConcept(ptUMLSRefsets_.CUI_CONCEPTS.getSourcePropertyNameFSN());
@@ -516,7 +516,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 	}
 
 	@Override
-	protected void addCustomRefsets(BPT_Refsets refset) throws Exception
+	protected void addCustomRefsets(BPT_MemberRefsets refset) throws Exception
 	{
 		refset.addProperty(cpcRefsetConceptKey_);
 	}

@@ -1,14 +1,14 @@
 package gov.va.rxnorm.propertyTypes;
 
-import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Attributes;
+import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Annotations;
 
 /**
  * Properties from the DTS ndf load which are treated as alternate IDs within the workbench.
  * @author Daniel Armbrust
  */
-public class PT_Attributes extends BPT_Attributes
+public class PT_Annotations extends BPT_Annotations
 {
-	public PT_Attributes()
+	public PT_Annotations()
 	{
 		indexByAltNames();
 		addProperty("Unique identifier for atom ", null, "RXAUI", "(RxNorm Atom Id)");  //loaded as an attribute and a id
