@@ -153,7 +153,6 @@
 							<goal>attach-artifact</goal>
 						</goals>
 						<configuration>
-							<failIfNoMatch>false</failIfNoMatch>
 							<artifacts>
 								<artifact>
 									<type>jbin.zip</type>
@@ -163,6 +162,17 @@
 									<file>${project.build.directory}/${project.build.finalName}-.jbin.zip</file>
 									<classifier>${resultArtifactClassifier}</classifier>
 								</artifact>
+							</artifacts>
+						</configuration>
+					</execution>
+					<execution>
+						<id>attach-artifact-debug</id>
+						<goals>
+							<goal>attach-artifact</goal>
+						</goals>
+						<configuration>
+							<skipAttach>${sdp}</skipAttach>
+							<artifacts>
 								<artifact>
 									<type>debug.zip</type>
 									<file>${project.build.directory}/${project.build.finalName}-.debug.zip</file>
