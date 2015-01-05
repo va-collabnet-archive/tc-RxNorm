@@ -6,7 +6,7 @@ import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Descripti
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_MemberRefsets;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.Property;
 import gov.va.oia.terminology.converters.sharedUtils.stats.ConverterUUID;
-import gov.va.oia.terminology.converters.umlsUtils.BaseConverter;
+import gov.va.oia.terminology.converters.umlsUtils.RRFBaseConverterMojo;
 import gov.va.oia.terminology.converters.umlsUtils.RRFDatabaseHandle;
 import gov.va.oia.terminology.converters.umlsUtils.UMLSFileReader;
 import gov.va.oia.terminology.converters.umlsUtils.ValuePropertyPairWithAttributes;
@@ -23,6 +23,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,8 +32,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import org.apache.maven.plugin.Mojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
 import org.ihtsdo.etypes.EConcept;
 import org.ihtsdo.tk.dto.concept.component.TkComponent;
 import org.ihtsdo.tk.dto.concept.component.description.TkDescription;
@@ -41,13 +43,10 @@ import org.ihtsdo.tk.dto.concept.component.refex.type_uuid.TkRefexUuidMember;
 import org.ihtsdo.tk.dto.concept.component.relationship.TkRelationship;
 
 /**
- * Goal to build RxNorm
- * 
- * @goal buildRxNorm
- * 
- * @phase process-sources
+ * Loader code to convert RxNorm into the workbench.
  */
-public class RxNormMojo extends BaseConverter implements Mojo
+@Mojo( name = "convert-RxNorm-to-jbin", defaultPhase = LifecyclePhase.PROCESS_SOURCES )
+public class RxNormMojo extends RRFBaseConverterMojo
 {
 	private EConcept allRefsetConcept_;
 	private EConcept allCUIRefsetConcept_;
@@ -57,48 +56,17 @@ public class RxNormMojo extends BaseConverter implements Mojo
 	
 	private PreparedStatement semanticTypeStatement, conSat, cuiRelStatementForward, auiRelStatementForward, cuiRelStatementBackward, auiRelStatementBackward;
 	
-	/**
-	 * Where RxNorm source files are
-	 * 
-	 * @parameter
-	 * @required
-	 */
-	private File srcDataPath;
-
-	/**
-	 * Location of the file.
-	 * 
-	 * @parameter expression="${project.build.directory}"
-	 * @required
-	 */
-	private File outputDirectory;
-
-	/**
-	 * Loader version number
-	 * Use parent because project.version pulls in the version of the data file, which I don't want.
-	 * 
-	 * @parameter expression="${project.parent.version}"
-	 * @required
-	 */
-	private String loaderVersion;
-
-	/**
-	 * Content version number
-	 * 
-	 * @parameter expression="${project.version}"
-	 * @required
-	 */
-	private String releaseVersion;
-
 	public void execute() throws MojoExecutionException
 	{
 		try
 		{
 			outputDirectory.mkdir();
 
-			loadDatabase();
+			String fileNameDatePortion = loadDatabase();
+			SimpleDateFormat sdf = new SimpleDateFormat("MMddYYYY");
+			long defaultTime = sdf.parse(fileNameDatePortion).getTime();
 			
-			init(outputDirectory, "RxNorm", "RXN", new PT_IDs(), new PT_Annotations(), Arrays.asList(new String[] {"RXNORM"}), null);
+			init(outputDirectory, "RxNorm", "RXN", new PT_IDs(), new PT_Annotations(), Arrays.asList(new String[] {"RXNORM"}), null, defaultTime);
 			
 			allRefsetConcept_ = ptUMLSRefsets_.getConcept(ptUMLSRefsets_.ALL.getSourcePropertyNameFSN());
 			allCUIRefsetConcept_ = ptUMLSRefsets_.getConcept(ptUMLSRefsets_.CUI_CONCEPTS.getSourcePropertyNameFSN());
@@ -108,7 +76,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 
 			// Add version data to allRefsetConcept
 			eConcepts_.addStringAnnotation(allRefsetConcept_, loaderVersion,  ptContentVersion_.LOADER_VERSION.getUUID(), false);
-			eConcepts_.addStringAnnotation(allRefsetConcept_, releaseVersion, ptContentVersion_.RELEASE.getUUID(), false);
+			eConcepts_.addStringAnnotation(allRefsetConcept_, converterResultVersion, ptContentVersion_.RELEASE.getUUID(), false);
 			
 			semanticTypeStatement = db_.getConnection().prepareStatement("select TUI, ATUI, CVF from RXNSTY where RXCUI = ?");
 			conSat = db_.getConnection().prepareStatement("select * from RXNSAT where RXCUI = ? and RXAUI = ? and (SAB='RXNORM' or ATN='NDC')");
@@ -192,9 +160,31 @@ public class RxNormMojo extends BaseConverter implements Mojo
 		}
 	}
 	
-	private void loadDatabase() throws Exception
+	/**
+	 * Returns the date portion of the file name - so from 'RxNorm_full_09022014.zip' it returns 09022014
+	 */
+	private String loadDatabase() throws Exception
 	{
 		// Set up the DB for loading the temp data
+		String toReturn = null;
+		
+		// Read the RRF file directly from the source zip file - need to find the zip first, to get the date out of the file name.
+		ZipFile zf = null;
+		for (File f : inputFileLocation.listFiles())
+		{
+			if (f.getName().toLowerCase().startsWith("rxnorm_full_") && f.getName().toLowerCase().endsWith(".zip"))
+			{
+				zf = new ZipFile(f);
+				toReturn = f.getName().substring("rxnorm_full_".length());
+				toReturn = toReturn.substring(0, toReturn.length() - 4); 
+				break;
+			}
+		}
+		if (zf == null)
+		{
+			throw new MojoExecutionException("Can't find source zip file");
+		}
+		
 		db_ = new RRFDatabaseHandle();
 		File dbFile = new File(outputDirectory, "rrfDB.h2.db");
 		boolean createdNew = db_.createOrOpenDatabase(new File(outputDirectory, "rrfDB"));
@@ -207,21 +197,6 @@ public class RxNormMojo extends BaseConverter implements Mojo
 		{
 			// RxNorm doesn't give us the UMLS tables that define the table definitions, so I put them into an XML file.
 			List<TableDefinition> tables = db_.loadTableDefinitionsFromXML(RxNormMojo.class.getResourceAsStream("/RxNormTableDefinitions.xml"));
-
-			// Read the RRF file directly from the source zip file
-			ZipFile zf = null;
-			for (File f : srcDataPath.listFiles())
-			{
-				if (f.getName().toLowerCase().startsWith("rxnorm_full_") && f.getName().toLowerCase().endsWith(".zip"))
-				{
-					zf = new ZipFile(f);
-					break;
-				}
-			}
-			if (zf == null)
-			{
-				throw new MojoExecutionException("Can't find source zip file");
-			}
 
 			for (TableDefinition td : tables)
 			{
@@ -261,6 +236,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 			s.execute("CREATE INDEX rel_sab_index ON RXNREL (SAB)");  //helps with rel metadata
 			s.close();
 		}
+		return toReturn;
 	}
 
 	private void processCUIRows(HashMap<String, ArrayList<RXNCONSO>> conceptData) throws IOException, SQLException
@@ -604,7 +580,7 @@ public class RxNormMojo extends BaseConverter implements Mojo
 	{
 		RxNormMojo mojo = new RxNormMojo();
 		mojo.outputDirectory = new File("../RxNorm-econcept/target");
-		mojo.srcDataPath = new File("../RxNorm-econcept/target/generated-resources/src/");
+		mojo.inputFileLocation = new File("../RxNorm-econcept/target/generated-resources/src/");
 		mojo.execute();
 	}
 }
