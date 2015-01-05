@@ -51,6 +51,8 @@
 			<groupId>gov.va.oia.terminology.converters</groupId>
 			<artifactId>RxNorm-mojo</artifactId>
 			<version>${loader.version}</version>
+			<scope>compile</scope>
+			<optional>true</optional>  <!-- Not needed at runtime -->
 		</dependency>
 	</dependencies>
 
