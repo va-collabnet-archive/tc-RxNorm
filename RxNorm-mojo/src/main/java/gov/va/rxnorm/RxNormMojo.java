@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -288,7 +289,6 @@ public class RxNormMojo extends RRFBaseConverterMojo
 	
 				if (rowData.suppress != null)
 				{
-					
 					desc.addUUIDAttribute(ptUMLSAttributes_.getProperty("SUPPRESS").getUUID(), ptSuppress_.getProperty(rowData.suppress).getUUID());
 				}
 				
@@ -514,12 +514,24 @@ public class RxNormMojo extends RRFBaseConverterMojo
 			String suppress = rs.getString("SUPPRESS");
 			String cvf = rs.getString("CVF");
 			
-			//for some reason, ATUI isn't always provided - don't know why.  fallback on randomly generated in those cases.
+			//for some reason, ATUI isn't always provided - don't know why.  must gen differently in those cases...
+			UUID stringAttrUUID;
+			UUID refsetUUID = ptTermAttributes_.get("RXNORM").getProperty(atn).getUUID();
+			if (atui != null)
+			{
+				stringAttrUUID = ConverterUUID.createNamespaceUUIDFromString("ATUI" + atui);
+			}
+			else
+			{
+				//TODO - for type ATN=UMLSCUI - should we even put on the ATV annotation?  I think it is dupe info - need to check.
+				//need to put the aui in here, to keep it unique, as each AUI frequently specs the same CUI
+				stringAttrUUID = ConverterUUID.createNamespaceUUIDFromStrings(itemToAnnotate.getPrimordialComponentUuid().toString(), 
+						rxaui, atv, refsetUUID.toString());
+			}
+			
 			//You would expect that ptTermAttributes_.get() would be looking up sab, rather than having RxNorm hardcoded... but this is an oddity of 
 			//a hack we are doing within the RxNorm load.
-			TkRefsetStrMember attribute = eConcepts_.addStringAnnotation(itemToAnnotate, 
-					(atui == null ? null : ConverterUUID.createNamespaceUUIDFromString("ATUI" + atui)), atv, 
-					ptTermAttributes_.get("RXNORM").getProperty(atn).getUUID(), false, null);
+			TkRefsetStrMember attribute = eConcepts_.addStringAnnotation(itemToAnnotate, stringAttrUUID, atv, refsetUUID, false, null);
 			
 			if (atui != null)
 			{
