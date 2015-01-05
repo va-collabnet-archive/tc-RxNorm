@@ -136,7 +136,7 @@
 							</descriptors>
 							<attach>false</attach>
 							<encoding>UTF-8</encoding>
-							<skipAssembly>${skipUUIDDebug}</skipAssembly>
+							<skipAssembly>${sdp}</skipAssembly>
 						</configuration>
 					</execution>
 				</executions>
