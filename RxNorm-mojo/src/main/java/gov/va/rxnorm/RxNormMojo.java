@@ -65,7 +65,7 @@ public class RxNormMojo extends RRFBaseConverterMojo
 			outputDirectory.mkdir();
 
 			String fileNameDatePortion = loadDatabase();
-			SimpleDateFormat sdf = new SimpleDateFormat("MMddYYYY");
+			SimpleDateFormat sdf = new SimpleDateFormat("MMddyyyy");
 			long defaultTime = sdf.parse(fileNameDatePortion).getTime();
 			
 			init(outputDirectory, "RxNorm", "RXN", new PT_IDs(), new PT_Annotations(), Arrays.asList(new String[] {"RXNORM"}), null, defaultTime);
